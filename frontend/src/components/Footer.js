@@ -40,17 +40,23 @@ function Footer() {
               </div>
             </div>
 
-            <div className="footer-section">
-              <h4>Follow Us</h4>
-              <div className="social-links">
-                <a href="#facebook" className="social-link" title="Facebook">
-                  <FaFacebook />
-                </a>
-              </div>
-              <p className="social-text">
-                Visit our Barangay Facebook page for updates and announcements
-              </p>
-            </div>
+<div className="footer-section">
+  <h4>Follow Us</h4>
+  <div className="social-links">
+    <a 
+      href="https://www.facebook.com/renilo.teves" 
+      className="social-link" 
+      title="Facebook"
+      target="_blank" 
+      rel="noopener noreferrer"
+    >
+      <FaFacebook />
+    </a>
+  </div>
+  <p className="social-text">
+    Visit our Barangay Facebook page for updates and announcements
+  </p>
+</div>
 
             <div className="footer-section">
               <h4>Partners</h4>
