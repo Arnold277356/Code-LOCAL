@@ -1,0 +1,341 @@
+.incentives-page {
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  padding: 80px 20px;
+}
+
+.incentives-content {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 60px;
+}
+
+.incentive-card {
+  background: white;
+  border-radius: 12px;
+  padding: 32px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.incentive-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+}
+
+.incentive-card.featured {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  transform: scale(1.05);
+}
+
+.incentive-card.featured:hover {
+  transform: scale(1.05) translateY(-4px);
+}
+
+.incentive-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.incentive-card h3 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: inherit;
+  margin: 0 0 16px 0;
+}
+
+.incentive-card p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: inherit;
+  margin: 0;
+}
+
+.incentive-card.featured p {
+  opacity: 0.95;
+}
+
+.reward-amount {
+  font-size: 48px;
+  font-weight: 800;
+  margin: 16px 0 8px 0;
+}
+
+.reward-unit {
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.reward-description {
+  margin-top: 16px;
+}
+
+.claim-steps {
+  text-align: left;
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0 0;
+}
+
+.claim-steps li {
+  padding: 8px 0;
+  padding-left: 24px;
+  position: relative;
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.claim-steps li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #10b981;
+  font-weight: bold;
+}
+
+.terms-list {
+  text-align: left;
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0 0;
+}
+
+.terms-list li {
+  padding: 8px 0;
+  padding-left: 24px;
+  position: relative;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.terms-list li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: #10b981;
+  font-weight: bold;
+}
+
+.calculator-section {
+  background: white;
+  border-radius: 12px;
+  padding: 40px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.calculator-section h3 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 30px;
+  text-align: center;
+  margin: 0 0 30px 0;
+}
+
+.calculator {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.calculator-input {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.calculator-input label {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 14px;
+  flex: 1;
+  min-width: 150px;
+}
+
+.calculator-input input {
+  flex: 1;
+  min-width: 100px;
+  padding: 10px 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.calculator-input input:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.calculator-input .btn {
+  padding: 10px 24px;
+  white-space: nowrap;
+}
+
+.calculator-result {
+  background: #ecfdf5;
+  border-radius: 8px;
+  padding: 24px;
+  border-left: 4px solid #10b981;
+  animation: slideDown 0.3s ease-out;
+}
+
+.result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  font-size: 14px;
+  color: #065f46;
+}
+
+.result-item.total {
+  border-top: 2px solid #10b981;
+  padding-top: 16px;
+  margin-top: 12px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.result-label {
+  font-weight: 600;
+}
+
+.result-value {
+  font-weight: 700;
+  color: #10b981;
+}
+
+.incentives-note {
+  background: #dbeafe;
+  border-left: 4px solid #3b82f6;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.incentives-note p {
+  margin: 0;
+  font-size: 14px;
+  color: #0c2340;
+  line-height: 1.6;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1024px) {
+  .incentives-content {
+    grid-template-columns: 1fr;
+  }
+
+  .incentive-card.featured {
+    transform: scale(1);
+  }
+
+  .incentive-card.featured:hover {
+    transform: translateY(-4px);
+  }
+}
+
+@media (max-width: 768px) {
+  .incentives-page {
+    padding: 60px 20px;
+  }
+
+  .incentives-content {
+    gap: 16px;
+  }
+
+  .incentive-card {
+    padding: 24px 20px;
+  }
+
+  .incentive-icon {
+    font-size: 36px;
+  }
+
+  .incentive-card h3 {
+    font-size: 18px;
+  }
+
+  .reward-amount {
+    font-size: 36px;
+  }
+
+  .calculator-section {
+    padding: 30px 20px;
+  }
+
+  .calculator-input {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .calculator-input label {
+    min-width: auto;
+  }
+
+  .calculator-input input,
+  .calculator-input .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .incentives-page {
+    padding: 40px 16px;
+  }
+
+  .incentive-card {
+    padding: 20px 16px;
+  }
+
+  .incentive-icon {
+    font-size: 32px;
+  }
+
+  .incentive-card h3 {
+    font-size: 16px;
+  }
+
+  .reward-amount {
+    font-size: 28px;
+  }
+
+  .calculator-section {
+    padding: 20px 16px;
+  }
+
+  .calculator-section h3 {
+    font-size: 20px;
+  }
+
+  .result-item {
+    font-size: 13px;
+  }
+
+  .result-item.total {
+    font-size: 16px;
+  }
+
+  .incentives-note p {
+    font-size: 12px;
+  }
+}
