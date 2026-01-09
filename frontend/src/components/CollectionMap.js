@@ -24,28 +24,28 @@ function CollectionMap({ dropOffs }) {
       setLocations([
         {
           id: 1,
-          name: 'Barangay Hall Drop-off Center',
+          name: 'Burol 1 Barangay Hall',
           address: 'Main Street, Barangay',
-          latitude: 14.5994,
-          longitude: 120.9842,
+          latitude: 14.3260,
+          longitude: 120.9625,
           schedule: 'Friday - Saturday, 9:00 AM - 5:00 PM',
           created_at: new Date().toISOString()
         },
         {
           id: 2,
-          name: 'Community Center',
+          name: 'Burol 1 Community Center',
           address: 'Secondary Road, Barangay',
-          latitude: 14.6021,
-          longitude: 120.9856,
+          latitude: 14.3260,
+          longitude: 120.9625,
           schedule: 'Friday - Saturday, 10:00 AM - 4:00 PM',
           created_at: new Date().toISOString()
         },
         {
           id: 3,
-          name: 'Market Area Collection Point',
+          name: 'Burol 1 Market Area',
           address: 'Public Market, Market Street',
-          latitude: 14.5975,
-          longitude: 120.9820,
+          latitude: 14.3260,
+          longitude: 120.9625,
           schedule: 'Friday - Saturday, 8:00 AM - 6:00 PM',
           created_at: new Date().toISOString()
         }
