@@ -22,28 +22,28 @@ function MapPage({ dropOffs }) {
       setLocations([
         {
           id: 1,
-          name: 'Balingasag Barangay Hall',
-          address: 'Main Street, Balingasag, Misamis Oriental',
-          latitude: 8.7507,
-          longitude: 124.5432,
+          name: 'Burol 1 Barangay Hall',
+          address: 'Burol 1, Dasmariñas Cavite, Zone A',
+          latitude: 14.3260,
+          longitude: 120.9625,
           schedule: 'Friday - Saturday, 9:00 AM - 5:00 PM',
           created_at: new Date().toISOString()
         },
         {
           id: 2,
-          name: 'Balingasag Community Center',
-          address: 'Secondary Road, Balingasag',
-          latitude: 8.7520,
-          longitude: 124.5445,
+          name: 'Burol 1 Community Center',
+          address: 'Burol 1, Dasmariñas Cavite, Zone B',
+          latitude: 14.3260,
+          longitude: 120.9625,
           schedule: 'Friday - Saturday, 10:00 AM - 4:00 PM',
           created_at: new Date().toISOString()
         },
         {
           id: 3,
-          name: 'Balingasag Market Collection Point',
-          address: 'Public Market, Balingasag',
-          latitude: 8.7495,
-          longitude: 124.5420,
+          name: 'Burol 1 Market Area',
+          address: 'Burol 1, Dasmariñas Cavite, Zone C',
+          latitude: 14.3260,
+          longitude: 120.9625,
           schedule: 'Friday - Saturday, 8:00 AM - 6:00 PM',
           created_at: new Date().toISOString()
         }
@@ -52,7 +52,7 @@ function MapPage({ dropOffs }) {
     setLoading(false);
   }, [dropOffs]);
 
-  const defaultCenter = [8.7507, 124.5432]; // Balingasag, Misamis Oriental
+  const defaultCenter = [14.3260, 120.9625]; // Burol 1, Dasmariñas Cavite
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -786,7 +786,7 @@ function RegisterPage() {
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
-                placeholder="123 Main Street, Balingasag, Misamis Oriental"
+                placeholder="123 Main Street, Burol 1, Dasmariñas Cavite"
                 className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 transition-all"
                 required
               />
