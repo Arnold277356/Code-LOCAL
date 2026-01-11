@@ -25,11 +25,16 @@ if (process.env.CLOUDINARY_CLOUD_NAME) {
 }
 
 // Database connection
+console.log("Attempting to connect to:", process.env.DATABASE_URL ? "URL detected" : "URL MISSING");
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL, 
+  connectionString: process.env.DATABASE_URL,
   ssl: {
     rejectUnauthorized: false
   }
+});
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
 });
 
 // Initialize database tables
