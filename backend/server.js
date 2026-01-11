@@ -28,7 +28,7 @@ if (process.env.CLOUDINARY_CLOUD_NAME) {
 console.log("Attempting to connect to:", process.env.DATABASE_URL ? "URL detected" : "URL MISSING");
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  host: undefined, 
+  host: undefined,
   ssl: {
     rejectUnauthorized: false
   }
