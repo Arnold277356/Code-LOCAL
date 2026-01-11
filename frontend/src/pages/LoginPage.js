@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { FaLock, FaEnvelope, FaCheckCircle } from 'react-icons/fa';
+export default LoginPage;
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -9,9 +10,13 @@ function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  try {
-      // 1. Send the data to your REAL Render server
-      const response = awaitfetch('https://burol-1-web-backend.onrender.com', {
+  
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const response = await fetch('https://burol-1-web-backend.onrender.com/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -22,7 +27,6 @@ function LoginPage() {
       const data = awaitresponse.json();
 
       if (response.ok) {
-        // 2. Store the REAL user data from the database
         localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('token', data.token);
 
@@ -161,6 +165,4 @@ function LoginPage() {
       </div>
     </div>
   );
-}
-
-export default LoginPage;
+}}
