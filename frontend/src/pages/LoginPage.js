@@ -19,7 +19,9 @@ function LoginPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username: email, password: password }),
+        body: JSON.stringify({ 
+          username: email, 
+          password: password }),
       });
 
       const data = await response.json();
@@ -71,17 +73,17 @@ function LoginPage() {
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 transition-all bg-gray-50 text-gray-900 placeholder-gray-500"
-                  required
-                />
+  Username  {/* Change 'Email Address' to 'Username' */}
+</label>
+<input
+  type="text" // Change 'email' to 'text'
+  id="email"
+  value={email}
+  onChange={(e) => setEmail(e.target.value)}
+  placeholder="Enter your username" // Update placeholder
+  className="..."
+  required
+/>
               </div>
 
               <div>
