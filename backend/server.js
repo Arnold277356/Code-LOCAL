@@ -26,8 +26,10 @@ if (process.env.CLOUDINARY_CLOUD_NAME) {
 
 // Database connection
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  connectionString: process.env.DATABASE_URL, 
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 // Initialize database tables
