@@ -10,9 +10,9 @@ function Navigation() {
 
   // Check for logged-in user whenever the location changes
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
+    const loggedInUser = localStorage.getItem('user');
+    if (loggedInUser) {
+      setUser(JSON.parse(loggedInUser));
     } else {
       setUser(null);
     }
