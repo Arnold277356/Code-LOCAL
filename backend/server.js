@@ -106,6 +106,45 @@ const initializeDatabase = async () => {
 
 // Routes
 
+// NEW: Just create an account without e-waste
+app.post('/api/auth/register-only', async (req, res) => {
+  const { username, email, password, first_name, last_name, contact } = req.body;
+  
+  try {
+    const result = await pool.query(
+      `INSERT INTO users (username, email, password, first_name, last_name, contact) 
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, username, first_name`,
+      [username, email, password, first_name, last_name, contact]
+    );
+    
+    res.status(201).json({
+      success: true,
+      user: result.rows[0],
+      message: 'Account created! You can register e-waste from your dashboard later.'
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ error: 'Username or Email already exists' });
+  }
+});
+
+// NEW: Register e-waste for an ALREADY existing user
+app.post('/api/registrations/existing', async (req, res) => {
+  const { user_id, e_waste_type, weight, address } = req.body;
+  const reward_points = weight * 15;
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO registrations (user_id, e_waste_type, weight, address, reward_points) 
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [user_id, e_waste_type, weight, address, reward_points]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get all drop-off locations
 app.get('/api/drop-offs', async (req, res) => {
   try {

@@ -11,7 +11,7 @@ function DashboardPage() {
   const [totalRewards, setTotalRewards] = useState(0);
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
+    const loggedInUser = JSON.parse(localStorage.getItem('user'));
     if (!userData) {
       navigate('/login');
       return;
@@ -20,43 +20,33 @@ function DashboardPage() {
     loadDrops();
   }, [navigate]);
 
-  const loadDrops = () => {
-    // Sample data - in production, fetch from API
-    const sampleDrops = [
-      {
-        id: 1,
-        type: 'Laptop',
-        weight: 2.5,
-        date: '2024-11-20',
-        location: 'Barangay Hall',
-        reward: 37.5,
-        status: 'Completed'
-      },
-      {
-        id: 2,
-        type: 'Desktop Computer',
-        weight: 5.0,
-        date: '2024-11-18',
-        location: 'Community Center',
-        reward: 75,
-        status: 'Completed'
-      },
-      {
-        id: 3,
-        type: 'Smartphone',
-        weight: 0.2,
-        date: '2024-11-15',
-        location: 'Market Area',
-        reward: 3,
-        status: 'Completed'
-      }
-    ];
+  const loadDrops = async (userId) => {
+    try {
+      // 1. Use your existing endpoint: /api/user/:userId/registrations
+      const response = await fetch(`https://burol-1-web-backend.onrender.com/api/user/${userId}/registrations`);
+      const data = await response.json();
 
-    setDrops(sampleDrops);
-    const total = sampleDrops.reduce((sum, drop) => sum + drop.weight, 0);
-    const rewards = sampleDrops.reduce((sum, drop) => sum + drop.reward, 0);
-    setTotalWeight(total);
-    setTotalRewards(rewards);
+      if (data.success) {
+        // 2. Map the data from your database to your table
+        const formattedDrops = data.registrations.map(drop => ({
+          id: drop.id,
+          type: drop.e_waste_type,
+          weight: parseFloat(drop.weight),
+          date: drop.created_at,
+          location: 'Barangay Hall', // You can update this if you add location to DB later
+          reward: parseFloat(drop.reward_points),
+          status: 'Completed'
+        }));
+
+        setDrops(formattedDrops);
+
+        // 3. Use the summary numbers already calculated by your backend!
+        setTotalWeight(parseFloat(data.summary.total_weight_kg));
+        setTotalRewards(parseFloat(data.summary.total_rewards_php));
+      }
+    } catch (error) {
+      console.error('Error loading drops from Burol 1 Backend:', error);
+    }
   };
 
   const handleLogout = () => {
@@ -96,7 +86,7 @@ function DashboardPage() {
             </div>
             <div>
               <h1 className="text-lg sm:text-xl font-bold">Dashboard</h1>
-              <p className="text-xs sm:text-sm text-emerald-100">Welcome, {user.email.split('@')[0]}</p>
+              <p className="text-xs sm:text-sm text-emerald-100">Welcome, {user.first_name || user.username}</p>
             </div>
           </div>
           <button
