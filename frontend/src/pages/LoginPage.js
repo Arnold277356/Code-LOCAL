@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { FaLock, FaEnvelope, FaCheckCircle } from 'react-icons/fa';
-export default LoginPage;
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -10,7 +9,6 @@ function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -40,11 +38,8 @@ function LoginPage() {
           }
         });
       } else {
-        // 3. Handle wrong password/email from database
         throw new Error(data.message || 'Invalid credentials');
       }
-
-      setLoading(false);
     } catch (error) {
       Swal.fire({
         icon: 'error',
@@ -52,30 +47,27 @@ function LoginPage() {
         text: error.message || 'An error occurred. Please try again.',
         confirmButtonColor: '#10b981'
       });
+    } finally {
       setLoading(false);
     }
+  }; // This was the missing closing bracket!
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Main Content */}
       <div className="flex-1 flex items-center justify-center px-4 py-8 sm:py-12">
         <div className="w-full max-w-md">
-          {/* Login Card */}
           <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 animate-fade-in">
-            {/* Logo Circle */}
             <div className="flex justify-center mb-6">
               <div className="w-24 h-24 rounded-full flex items-center justify-center shadow-lg bg-white border-4 border-emerald-600">
                 <img src="/logo.png" alt="E-Cycle Hub" className="w-20 h-20 object-contain" />
               </div>
             </div>
 
-            {/* Title */}
             <div className="text-center mb-8">
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
               <p className="text-gray-600 text-sm">Sign in to track your e-waste drops and earn rewards</p>
             </div>
 
-            {/* Form */}
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -116,7 +108,6 @@ function LoginPage() {
               </button>
             </form>
 
-            {/* Register Link */}
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
                 Don't have an account?{' '}
@@ -126,7 +117,6 @@ function LoginPage() {
               </p>
             </div>
 
-            {/* Features List */}
             <div className="mt-6 space-y-2">
               <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Features</p>
               <ul className="space-y-1.5 text-xs text-gray-600">
@@ -146,7 +136,6 @@ function LoginPage() {
             </div>
           </div>
 
-          {/* Info Cards - Mobile */}
           <div className="lg:hidden mt-6 space-y-3">
             <div className="bg-white rounded-lg p-4 shadow-md border-l-4 border-emerald-600">
               <p className="text-sm font-semibold text-gray-900 mb-1">📊 Track Impact</p>
@@ -165,4 +154,6 @@ function LoginPage() {
       </div>
     </div>
   );
-}}
+}
+
+export default LoginPage;
