@@ -162,7 +162,7 @@ if (!formData.address || formData.address.trim().length < 5) {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/registrations', {
+      const response = await fetch('https://burol-1-web-backend.onrender.com/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)

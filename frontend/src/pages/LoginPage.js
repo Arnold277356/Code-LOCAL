@@ -9,67 +9,47 @@ function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-
-    if (!email.trim()) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Email Required',
-        text: 'Please enter your email address',
-        confirmButtonColor: '#10b981'
+  try {
+      // 1. Send the data to your REAL Render server
+      const response = awaitfetch('https://burol-1-web-backend.onrender.com', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
       });
-      return;
-    }
 
-    if (!password.trim()) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Password Required',
-        text: 'Please enter your password',
-        confirmButtonColor: '#10b981'
-      });
-      return;
-    }
+      const data = awaitresponse.json();
 
-    setLoading(true);
-
-    try {
-      // Simulate login - in production, connect to backend
-      setTimeout(() => {
-        // Store user info in localStorage
-        localStorage.setItem('user', JSON.stringify({
-          email,
-          loginTime: new Date().toISOString(),
-          isLoggedIn: true
-        }));
+      if (response.ok) {
+        // 2. Store the REAL user data from the database
+        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('token', data.token);
 
         Swal.fire({
           icon: 'success',
           title: '✓ Login Successful!',
-          html: `<p>Welcome back, <strong>${email.split('@')[0]}</strong>!</p><p style="font-size: 14px; color: #666; margin-top: 10px;">Redirecting to your dashboard...</p>`,
+          html: `<p>Welcome back!</p>`,
           confirmButtonColor: '#10b981',
-          confirmButtonText: 'Continue',
-          allowOutsideClick: false,
           didOpen: () => {
-            setTimeout(() => {
-              navigate('/dashboard');
-            }, 1500);
+            setTimeout(() => navigate('/dashboard'), 1500);
           }
         });
+      } else {
+        // 3. Handle wrong password/email from database
+        throw new Error(data.message || 'Invalid credentials');
+      }
 
-        setLoading(false);
-      }, 1000);
+      setLoading(false);
     } catch (error) {
       Swal.fire({
         icon: 'error',
         title: 'Login Failed',
-        text: 'An error occurred. Please try again.',
+        text: error.message || 'An error occurred. Please try again.',
         confirmButtonColor: '#10b981'
       });
       setLoading(false);
     }
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
