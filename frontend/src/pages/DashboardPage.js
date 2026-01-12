@@ -12,12 +12,12 @@ function DashboardPage() {
 
   useEffect(() => {
     const loggedInUser = JSON.parse(localStorage.getItem('user'));
-    if (!userData) {
+    if (!loggedInUser) {
       navigate('/login');
       return;
     }
-    setUser(JSON.parse(userData));
-    loadDrops();
+    setUser(loggedInUser) ;
+    loadDrops(loggedInUser.id);
   }, [navigate]);
 
   const loadDrops = async (userId) => {
