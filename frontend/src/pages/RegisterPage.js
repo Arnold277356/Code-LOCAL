@@ -316,7 +316,7 @@ const handleSubmit = async (e) => {
             {/* ========== CONSENT ========== */}
             <div className="bg-yellow-50 rounded-xl p-4 border-2 border-yellow-200">
               <label className="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" name="consent" checked={formData.consent} onChange={handleChange} className="w-5 h-5 mt-1 text-emerald-600 rounded focus:ring-2 focus:ring-emerald-500" required />
+                <input type="checkbox" name="consent" checked={formData.consent} onChange={handleChange} className="w-5 h-5 mt-1 text-emerald-600 rounded focus:ring-2 focus:ring-emerald-500" />
                 <span className="text-sm text-gray-700">
                   I consent to the collection and processing of my e-waste and agree to the terms and conditions *
                 </span>
