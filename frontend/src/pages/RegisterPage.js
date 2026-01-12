@@ -98,43 +98,34 @@ function RegisterPage() {
   };
 
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // E-waste validation
-if (!formData.first_name || !formData.last_name || !formData.address || !formData.age || !formData.contact || !formData.e_waste_type || !formData.weight || !formData.consent) {
-  Swal.fire({ 
-    icon: 'warning', 
-    title: 'Missing Fields', 
-    text: 'Please fill all required fields', 
-    confirmButtonColor: '#10b981' 
-  });
-  return;
-}
+    const isRegisteringEWaste = formData.e_waste_type && formData.weight;
 
-if (!formData.address || formData.address.trim().length < 5) {
-  Swal.fire({ 
-    icon: 'warning', 
-    title: 'Address Required', 
-    text: 'Please enter your address so we know where to collect the e-waste.', 
-    confirmButtonColor: '#10b981' 
-  });
-  return;
-}
+    if (isRegisteringEWaste) {
+      if (formData.weight <= 0) {
+        Swal.fire({ icon: 'warning', title: 'Invalid Weight', text: 'Weight must be greater than 0', confirmButtonColor: '#10b981' });
+        return;
+      }
+      if (!formData.consent) {
+        Swal.fire({ icon: 'warning', title: 'Consent Required', text: 'Please agree to the terms for e-waste collection', confirmButtonColor: '#10b981' });
+        return;
+      }
+    }
 
-    if (formData.age < 18 || formData.age > 99) {
+    if (!formData.username || !formData.email || !formData.password || !formData.first_name || !formData.last_name) {
+      Swal.fire({ icon: 'warning', title: 'Missing Info', text: 'Please fill in your Name and Account details.', confirmButtonColor: '#10b981' });
+      return;
+    }
+
+    if (formData.age && (formData.age < 18 || formData.age > 99)) {
       Swal.fire({ icon: 'warning', title: 'Invalid Age', text: 'Age must be 18-99', confirmButtonColor: '#10b981' });
       return;
     }
 
-    if (formData.contact.length !== 11) {
+    if (formData.contact && formData.contact.length !== 11) {
       Swal.fire({ icon: 'warning', title: 'Invalid Contact', text: 'Contact must be 11 digits', confirmButtonColor: '#10b981' });
-      return;
-    }
-
-    // Credentials validation
-    if (!formData.username || formData.username.length < 3 || formData.username.length > 20) {
-      Swal.fire({ icon: 'warning', title: 'Invalid Username', text: 'Username must be 3-20 characters', confirmButtonColor: '#10b981' });
       return;
     }
 
@@ -162,7 +153,11 @@ if (!formData.address || formData.address.trim().length < 5) {
     setLoading(true);
 
     try {
-      const response = await fetch('https://burol-1-web-backend.onrender.com/api/registrations', {
+      const endpoint = isRegisteringEWaste 
+        ? '/api/registrations' 
+        : '/api/auth/register-only';
+
+      const response = await fetch(`https://burol-1-web-backend.onrender.com${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -170,9 +165,8 @@ if (!formData.address || formData.address.trim().length < 5) {
 
       if (response.ok) {
         const data = await response.json();
-        const reward = formData.weight * 15;
-        const fullName = `${formData.first_name} ${formData.middle_name ? formData.middle_name + ' ' : ''}${formData.last_name}${formData.suffix ? ' ' + formData.suffix : ''}`;
-
+        const reward = isRegisteringEWaste ? (formData.weight * 15) : 0;
+        
         Swal.fire({
           icon: 'success',
           title: '✓ Registration Successful!',
@@ -180,11 +174,12 @@ if (!formData.address || formData.address.trim().length < 5) {
             <div style="text-align: center;">
               <p style="font-size: 16px; margin: 10px 0;"><strong>Welcome, ${formData.first_name}!</strong></p>
               <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; margin: 15px 0;">
-                <p style="margin: 8px 0;"><strong>Name:</strong> ${fullName}</p>
                 <p style="margin: 8px 0;"><strong>Username:</strong> ${formData.username}</p>
-                <p style="margin: 8px 0;"><strong>E-Waste:</strong> ${formData.e_waste_type}</p>
-                <p style="margin: 8px 0;"><strong>Weight:</strong> ${formData.weight} kg</p>
-                <p style="margin: 8px 0; font-size: 18px; color: #10b981;"><strong>Reward: ₱${reward.toFixed(2)}</strong></p>
+                ${isRegisteringEWaste ? `
+                  <p style="margin: 8px 0;"><strong>E-Waste:</strong> ${formData.e_waste_type}</p>
+                  <p style="margin: 8px 0;"><strong>Weight:</strong> ${formData.weight} kg</p>
+                  <p style="margin: 8px 0; font-size: 18px; color: #10b981;"><strong>Reward: ₱${reward.toFixed(2)}</strong></p>
+                ` : '<p style="margin: 8px 0; color: #059669;">Account created successfully!</p>'}
               </div>
               <p style="font-size: 14px; color: #666;">You can now login with your username and password!</p>
             </div>
@@ -194,13 +189,6 @@ if (!formData.address || formData.address.trim().length < 5) {
         }).then(() => {
           window.location.href = '/login';
         });
-
-        setFormData({
-          first_name: '', middle_name: '', last_name: '', suffix: '', address: '', age: '', contact: '',
-          e_waste_type: '', weight: '', photo_url: '', consent: false,
-          username: '', email: '', password: '', confirm_password: '', security_question: 'What is your mother\'s name?', security_answer: ''
-        });
-        setPhotoPreview('');
       } else {
         const error = await response.json();
         Swal.fire({ icon: 'error', title: 'Registration Failed', text: error.error, confirmButtonColor: '#10b981' });
@@ -232,7 +220,7 @@ if (!formData.address || formData.address.trim().length < 5) {
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">First Name *</label>
-                  <input type="text" name="first_name" value={formData.first_name} onChange={handleChange} placeholder="Juan" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all" required />
+                  <input type="text" name="first_name" value={formData.first_name} onChange={handleChange} placeholder="Juan" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Middle Name</label>
@@ -240,7 +228,7 @@ if (!formData.address || formData.address.trim().length < 5) {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Last Name *</label>
-                  <input type="text" name="last_name" value={formData.last_name} onChange={handleChange} placeholder="Cruz" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all" required />
+                  <input type="text" name="last_name" value={formData.last_name} onChange={handleChange} placeholder="Cruz" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Suffix</label>
@@ -250,27 +238,27 @@ if (!formData.address || formData.address.trim().length < 5) {
 
               <div className="mb-4">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Address *</label>
-                <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Waterfall Balingasag Mis Or" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all" required />
+                <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Waterfall Balingasag Mis Or" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all"  />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Age (18-99) *</label>
-                  <input type="number" name="age" value={formData.age} onChange={handleChange} placeholder="21" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all" required />
+                  <input type="number" name="age" value={formData.age} onChange={handleChange} placeholder="21" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Contact (11 digits) *</label>
-                  <input type="tel" name="contact" value={formData.contact} onChange={handleChange} placeholder="09856122843" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all" required />
+                  <input type="tel" name="contact" value={formData.contact} onChange={handleChange} placeholder="09856122843" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all"  />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Weight (kg) *</label>
-                  <input type="number" name="weight" value={formData.weight} onChange={handleChange} placeholder="100" step="0.1" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all" required />
+                  <input type="number" name="weight" value={formData.weight} onChange={handleChange} placeholder="100" step="0.1" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all"/>
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">E-Waste Type *</label>
-                <select name="e_waste_type" value={formData.e_waste_type} onChange={handleChange} className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all" required>
+                <select name="e_waste_type" value={formData.e_waste_type} onChange={handleChange} className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all">
                   <option value="">Select E-Waste Type</option>
                   {eWasteTypes.map(type => <option key={type} value={type}>{type}</option>)}
                 </select>
