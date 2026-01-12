@@ -274,16 +274,40 @@ app.post('/api/upload-photo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Upload failed' }); }
 });
 
+// GET USER STATS: Sum up weight and points for the Dashboard
 app.get('/api/user/:userId', async (req, res) => {
   try {
-    const userRes = await pool.query('SELECT id, email, first_name, last_name, contact, photo_url FROM users WHERE id = $1', [req.params.userId]);
-    const regRes = await pool.query('SELECT * FROM registrations WHERE user_id = $1 ORDER BY created_at DESC', [req.params.userId]);
+    const { userId } = req.params;
+
+    // 1. Fetch user profile
+    const userRes = await pool.query('SELECT id, email, first_name, last_name, contact, photo_url FROM users WHERE id = $1', [userId]);
     
+    // 2. Fetch all e-waste registrations for this user
+    const regRes = await pool.query('SELECT * FROM registrations WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+    
+    // 3. Calculate totals
     const totalWeight = regRes.rows.reduce((sum, r) => sum + parseFloat(r.weight || 0), 0);
     const totalRewards = regRes.rows.reduce((sum, r) => sum + parseFloat(r.reward_points || 0), 0);
 
-    res.json({ success: true, user: { ...userRes.rows[0], total_registrations: regRes.rows.length, total_weight_kg: totalWeight.toFixed(2), total_rewards_php: totalRewards.toFixed(2), registrations: regRes.rows } });
-  } catch (err) { res.status(500).json({ error: 'Fetch failed' }); }
+    // DEBUG: This will show up in your Render Logs!
+    console.log(`User ${userId} has ${regRes.rows.length} records. Total Weight: ${totalWeight}`);
+
+    // 4. Send the package to the Dashboard
+    res.json({ 
+      success: true, 
+      user: { 
+        ...userRes.rows[0], 
+        total_registrations: regRes.rows.length, 
+        totalWeight: totalWeight,      // Renamed to match frontend
+        totalRewards: totalRewards,    // Renamed to match frontend
+        registrations: regRes.rows 
+      } 
+    });
+
+  } catch (err) { 
+    console.error(err);
+    res.status(500).json({ error: 'Fetch failed' }); 
+  }
 });
 
 app.get('/api/health', (req, res) => res.json({ status: 'Server is running' }));

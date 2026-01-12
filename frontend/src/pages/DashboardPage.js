@@ -22,27 +22,27 @@ function DashboardPage() {
 
   const loadDrops = async (userId) => {
     try {
-      // 1. Use your existing endpoint: /api/user/:userId/registrations
-      const response = await fetch(`https://burol-1-web-backend.onrender.com/api/user/${userId}/registrations`);
+      // 1. Updated the URL to match the backend route we fixed
+      const response = await fetch(`https://burol-1-web-backend.onrender.com/api/user/${userId}`);
       const data = await response.json();
 
       if (data.success) {
-        // 2. Map the data from your database to your table
-        const formattedDrops = data.registrations.map(drop => ({
+        // 2. Map the registrations from the 'user' object
+        const formattedDrops = data.user.registrations.map(drop => ({
           id: drop.id,
           type: drop.e_waste_type,
           weight: parseFloat(drop.weight),
           date: drop.created_at,
-          location: 'Barangay Hall', // You can update this if you add location to DB later
+          location: drop.address || 'Barangay Hall', 
           reward: parseFloat(drop.reward_points),
           status: 'Completed'
         }));
 
         setDrops(formattedDrops);
 
-        // 3. Use the summary numbers already calculated by your backend!
-        setTotalWeight(parseFloat(data.summary.total_weight_kg));
-        setTotalRewards(parseFloat(data.summary.total_rewards_php));
+        // 3. Match the names we set in the server.js (totalWeight and totalRewards)
+        setTotalWeight(parseFloat(data.user.totalWeight || 0));
+        setTotalRewards(parseFloat(data.user.totalRewards || 0));
       }
     } catch (error) {
       console.error('Error loading drops from Burol 1 Backend:', error);
