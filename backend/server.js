@@ -151,7 +151,7 @@ app.post('/api/registrations', async (req, res) => {
     const normalized = normalizeUserInput(username, email);
     const hashedPassword = await bcrypt.hash(password, 10);
     const hashedAnswer = await bcrypt.hash(security_answer, 10);
-    const reward_points = parseFloat(weight) * 15;
+    const reward_points = parseFloat(weight) * 5;
 
     await client.query('BEGIN');
     
@@ -198,6 +198,36 @@ app.post('/api/login', async (req, res) => {
     res.json({ success: true, user: { id: user.id, username: user.username, email: user.email, first_name: user.first_name, last_name: user.last_name } });
   } catch (error) {
     res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// NEW ROUTE: For logged-in users submitting E-waste without re-registering
+app.post('/api/e-waste-only', async (req, res) => {
+  const { 
+    userId, first_name, last_name, address, 
+    e_waste_type, weight, photo_url, consent 
+  } = req.body;
+
+  try {
+    // 1. Calculate reward points (₱5 per kg)
+    const reward_points = parseFloat(weight) * 5;
+
+    // 2. Insert the e-waste record linked to the existing userId
+    const result = await pool.query(
+      `INSERT INTO registrations 
+       (user_id, first_name, last_name, address, e_waste_type, weight, photo_url, consent, reward_points) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [userId, first_name, last_name, address, e_waste_type, weight, photo_url || null, consent, reward_points]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'E-waste record added to your account!',
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error('E-waste submission error:', error);
+    res.status(500).json({ error: 'Failed to submit record' });
   }
 });
 

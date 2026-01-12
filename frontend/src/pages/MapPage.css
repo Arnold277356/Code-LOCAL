@@ -197,3 +197,26 @@
     font-size: 12px;
   }
 }
+
+/* Fix for Map Overlay Bug */
+.leaflet-container {
+  z-index: 1 !important; /* Forces the map to stay behind menus/popups */
+  position: relative;
+}
+
+/* Ensure the Popups inside the map still appear correctly */
+.leaflet-pane {
+  z-index: 2 !important;
+}
+
+.leaflet-top, .leaflet-bottom {
+  z-index: 3 !important; /* Keeps map controls visible but not overlapping nav */
+}
+
+/* Important: Ensure your Navbar stays on top of everything */
+/* If your navbar class is named differently, update the selector below */
+nav, .navbar, .header-container {
+  z-index: 1000 !important;
+  position: sticky;
+  top: 0;
+}
