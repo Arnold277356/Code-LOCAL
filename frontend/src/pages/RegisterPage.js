@@ -51,45 +51,41 @@ function RegisterPage() {
 
     // 1. Validation Logic
     if (isLoggedIn) {
-        // If logged in, only E-waste fields and consent are required
         if (!formData.e_waste_type || !formData.weight || !formData.address || !formData.consent) {
             Swal.fire({ icon: 'warning', title: 'Required Fields', text: 'Please fill in E-waste type, weight, address, and check the consent box.' });
             return;
         }
     } else {
-        // If NOT logged in, Account fields are required
         if (!formData.username || !formData.email || !formData.password || !formData.security_answer) {
             Swal.fire({ icon: 'warning', title: 'Missing Info', text: 'Please complete all account fields.' });
             return;
         }
     }
-// --- ADD THIS LOGGING SECTION ---
-  console.log("--- BARANGAY BUROL 1 DEBUG ---");
-  console.log("Logged In?:", isLoggedIn);
-  console.log("User Data from Storage:", loggedInUser);
-  console.log("User ID:", loggedInUser?.id);
-  console.log("Payload Sending to Server:", payload);
-  // --------------------------------
+
     setLoading(true);
 
+    // --- STEP 1: DEFINE THE PAYLOAD ---
+    const payload = isLoggedIn 
+      ? { 
+          ...formData, 
+          userId: loggedInUser?.id, 
+          weight: parseFloat(formData.weight),
+          age: formData.age ? parseInt(formData.age) : null 
+        } 
+      : formData;
+
+    // --- STEP 2: THE CONSOLE LOG YOU NEED ---
+    console.log("--- DEBUGGING DATA FOR BARANGAY ---");
+    console.log("Payload being sent:", payload);
+    console.log("Check User ID specifically:", payload.userId);
+
     try {
-      // Determine the endpoint: 
-      // If logged in, use a specific e-waste-only route. Otherwise, use existing registration route.
       const endpoint = isLoggedIn ? '/api/e-waste-only' : '/api/registrations';
       
-      const payload = isLoggedIn 
-  ? { 
-      ...formData, 
-      userId: loggedInUser.id,
-      weight: parseFloat(formData.weight), // This forces it to be a number
-      age: formData.age ? parseInt(formData.age) : null // Forces age to be a number too
-    } 
-  : formData;
-
       const response = await fetch(`https://burol-1-web-backend.onrender.com${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload) 
       });
 
       if (response.ok) {
