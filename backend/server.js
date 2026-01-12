@@ -46,7 +46,7 @@ const initializeDatabase = async () => {
         password VARCHAR(255) NOT NULL,
         first_name VARCHAR(255) NOT NULL,
         last_name VARCHAR(255) NOT NULL,
-        contact VARCHAR(11) UNIQUE NOT NULL,
+        contact VARCHAR(11),
         photo_url TEXT,
         security_question VARCHAR(255) NOT NULL,
         security_answer VARCHAR(255) NOT NULL,
@@ -111,11 +111,11 @@ app.post('/api/auth/register-only', async (req, res) => {
   const { username, email, password, first_name, last_name, contact } = req.body;
   
   try {
-    const result = await pool.query(
-      `INSERT INTO users (username, email, password, first_name, last_name, contact) 
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, username, first_name`,
-      [username, email, password, first_name, last_name, contact]
-    );
+  const result = await pool.query(
+  `INSERT INTO users (username, email, password, first_name, last_name, contact) 
+   VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, username, first_name`,
+  [username, email, password, first_name, last_name, contact || null]
+);
     
     res.status(201).json({
       success: true,
