@@ -1,11 +1,10 @@
 import React, { useState, useRef } from 'react';
 import Swal from 'sweetalert2';
-import { FaCamera, FaUpload, FaVideo, FaLock, FaUser, FaEnvelope } from 'react-icons/fa';
+import { FaLock, FaUser, FaEnvelope } from 'react-icons/fa';
 import './RegisterPage.css';
 
 function RegisterPage() {
   const [formData, setFormData] = useState({
-    // E-waste fields
     first_name: '',
     middle_name: '',
     last_name: '',
@@ -16,31 +15,25 @@ function RegisterPage() {
     e_waste_type: '',
     weight: '',
     consent: false,
-    // User credentials
     username: '',
     email: '',
     password: '',
     confirm_password: '',
-    security_question: 'What is your mother\'s name?',
+    security_question: "What is your mother's name?",
     security_answer: ''
   });
 
-  const [photoPreview, setPhotoPreview] = useState('');
-  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const [showCamera, setShowCamera] = useState(false);
 
   const securityQuestions = [
-    'What is your mother\'s name?',
-    'What is your pet\'s name?',
-    'What is your favorite color?',
-    'What is your favorite food?',
-    'What city were you born in?',
-    'What is your favorite movie?',
-    'What is your favorite book?',
-    'What is your favorite sports team?'
+    "What is your mother's name?",
+    "What is your pet's name?",
+    "What is your favorite color?",
+    "What is your favorite food?",
+    "What city were you born in?",
+    "What is your favorite movie?",
+    "What is your favorite book?",
+    "What is your favorite sports team?"
   ];
 
   const eWasteTypes = [
@@ -53,18 +46,14 @@ function RegisterPage() {
     const { name, value, type, checked } = e.target;
     let finalValue = type === 'checkbox' ? checked : value;
 
-    // E-waste field validation
-    if (['first_name', 'last_name'].includes(name)) {
-      finalValue = value.replace(/[^a-zA-Z\s]/g, '');
-    }
-    if (name === 'middle_name') {
+    if (['first_name', 'last_name', 'middle_name'].includes(name)) {
       finalValue = value.replace(/[^a-zA-Z\s]/g, '');
     }
     if (name === 'suffix') {
       finalValue = value.replace(/[^a-zA-Z\s.]/g, '');
     }
     if (name === 'address') {
-      finalValue = value.replace(/[^a-zA-Z\s,\-]/g, '');
+      finalValue = value.replace(/[^a-zA-Z0-9\s,\-]/g, '');
     }
     if (name === 'age') {
       finalValue = value.replace(/[^0-9]/g, '').slice(0, 2);
@@ -79,26 +68,7 @@ function RegisterPage() {
     setFormData(prev => ({ ...prev, [name]: finalValue }));
   };
 
-  const resizeImage = (file, callback) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const size = Math.min(img.width, img.height);
-        canvas.width = 200;
-        canvas.height = 200;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, (img.width - size) / 2, (img.height - size) / 2, size, size, 0, 0, 200, 200);
-        canvas.toBlob(callback, 'image/jpeg', 0.9);
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  };
-
-
-const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const isRegisteringEWaste = formData.e_waste_type && formData.weight;
@@ -115,17 +85,12 @@ const handleSubmit = async (e) => {
     }
 
     if (!formData.username || !formData.email || !formData.password || !formData.first_name || !formData.last_name) {
-      Swal.fire({ icon: 'warning', title: 'Missing Info', text: 'Please fill in your Name and Account details.', confirmButtonColor: '#10b981' });
+      Swal.fire({ icon: 'warning', title: 'Missing Info', text: 'Please fill in your Name, Username, Email, and Password.', confirmButtonColor: '#10b981' });
       return;
     }
 
     if (formData.age && (formData.age < 18 || formData.age > 99)) {
       Swal.fire({ icon: 'warning', title: 'Invalid Age', text: 'Age must be 18-99', confirmButtonColor: '#10b981' });
-      return;
-    }
-
-    if (formData.contact && formData.contact.length !== 11) {
-      Swal.fire({ icon: 'warning', title: 'Invalid Contact', text: 'Contact must be 11 digits', confirmButtonColor: '#10b981' });
       return;
     }
 
@@ -145,7 +110,7 @@ const handleSubmit = async (e) => {
       return;
     }
 
-    if (!formData.security_answer.trim() || formData.security_answer.trim().length < 2) {
+    if (!formData.security_answer.trim()) {
       Swal.fire({ icon: 'warning', title: 'Invalid Security Answer', text: 'Please answer the security question', confirmButtonColor: '#10b981' });
       return;
     }
@@ -153,9 +118,7 @@ const handleSubmit = async (e) => {
     setLoading(true);
 
     try {
-      const endpoint = isRegisteringEWaste 
-        ? '/api/registrations' 
-        : '/api/auth/register-only';
+      const endpoint = isRegisteringEWaste ? '/api/registrations' : '/api/auth/register-only';
 
       const response = await fetch(`https://burol-1-web-backend.onrender.com${endpoint}`, {
         method: 'POST',
@@ -164,7 +127,6 @@ const handleSubmit = async (e) => {
       });
 
       if (response.ok) {
-        const data = await response.json();
         const reward = isRegisteringEWaste ? (formData.weight * 15) : 0;
         
         Swal.fire({
@@ -213,14 +175,13 @@ const handleSubmit = async (e) => {
         <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
           <form onSubmit={handleSubmit} className="space-y-8">
 
-            {/* ========== E-WASTE INFORMATION ========== */}
             <div className="bg-blue-50 rounded-xl p-6 border-2 border-blue-200">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">E-Waste Information</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">E-Waste Information (Optional)</h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">First Name *</label>
-                  <input type="text" name="first_name" value={formData.first_name} onChange={handleChange} placeholder="Juan" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all" />
+                  <input type="text" name="first_name" value={formData.first_name} onChange={handleChange} placeholder="Juan" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all" required />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Middle Name</label>
@@ -228,7 +189,7 @@ const handleSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Last Name *</label>
-                  <input type="text" name="last_name" value={formData.last_name} onChange={handleChange} placeholder="Cruz" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all" />
+                  <input type="text" name="last_name" value={formData.last_name} onChange={handleChange} placeholder="Cruz" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all" required />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Suffix</label>
@@ -237,27 +198,27 @@ const handleSubmit = async (e) => {
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Address *</label>
-                <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Waterfall Balingasag Mis Or" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all"  />
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Address</label>
+                <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Waterfall Balingasag Mis Or" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all" />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Age (18-99) *</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Age (18-99)</label>
                   <input type="number" name="age" value={formData.age} onChange={handleChange} placeholder="21" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Contact (11 digits) *</label>
-                  <input type="tel" name="contact" value={formData.contact} onChange={handleChange} placeholder="09856122843" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all"  />
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Contact (11 digits)</label>
+                  <input type="tel" name="contact" value={formData.contact} onChange={handleChange} placeholder="09856122843" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Weight (kg) *</label>
-                  <input type="number" name="weight" value={formData.weight} onChange={handleChange} placeholder="100" step="0.1" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all"/>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Weight (kg)</label>
+                  <input type="number" name="weight" value={formData.weight} onChange={handleChange} placeholder="0.0" step="0.1" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">E-Waste Type *</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">E-Waste Type</label>
                 <select name="e_waste_type" value={formData.e_waste_type} onChange={handleChange} className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all">
                   <option value="">Select E-Waste Type</option>
                   {eWasteTypes.map(type => <option key={type} value={type}>{type}</option>)}
@@ -265,7 +226,6 @@ const handleSubmit = async (e) => {
               </div>
             </div>
 
-            {/* ========== USER CREDENTIALS ========== */}
             <div className="bg-purple-50 rounded-xl p-6 border-2 border-purple-200">
               <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <FaUser className="text-purple-600" /> Create Your Account
@@ -273,7 +233,7 @@ const handleSubmit = async (e) => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Username * (3-20 characters)</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Username *</label>
                   <input type="text" name="username" value={formData.username} onChange={handleChange} placeholder="john_doe" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-100 transition-all" required />
                 </div>
                 <div>
@@ -287,7 +247,7 @@ const handleSubmit = async (e) => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                    <FaLock className="text-purple-600" /> Password * (min 6 characters)
+                    <FaLock className="text-purple-600" /> Password *
                   </label>
                   <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="••••••" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-100 transition-all" required />
                 </div>
@@ -313,17 +273,15 @@ const handleSubmit = async (e) => {
               </div>
             </div>
 
-            {/* ========== CONSENT ========== */}
             <div className="bg-yellow-50 rounded-xl p-4 border-2 border-yellow-200">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input type="checkbox" name="consent" checked={formData.consent} onChange={handleChange} className="w-5 h-5 mt-1 text-emerald-600 rounded focus:ring-2 focus:ring-emerald-500" />
                 <span className="text-sm text-gray-700">
-                  I consent to the collection and processing of my e-waste and agree to the terms and conditions *
+                  I consent to the collection and processing of my e-waste and agree to the terms and conditions
                 </span>
               </label>
             </div>
 
-            {/* ========== SUBMIT BUTTON ========== */}
             <button
               type="submit"
               disabled={loading}
@@ -331,12 +289,6 @@ const handleSubmit = async (e) => {
             >
               {loading ? 'Registering...' : 'Submit Registration'}
             </button>
-
-            <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-600">
-              <p className="text-sm text-green-800">
-                <strong>Note:</strong> Your information will be kept confidential and used only for e-waste collection purposes. We appreciate your contribution to environmental sustainability!
-              </p>
-            </div>
           </form>
         </div>
       </div>
