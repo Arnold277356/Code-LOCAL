@@ -218,9 +218,19 @@ app.post('/api/e-waste-only', async (req, res) => {
        (user_id, first_name, middle_name, last_name, suffix, address, age, contact, e_waste_type, weight, photo_url, consent, reward_points) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
       [
-        userId, first_name, middle_name || null, last_name, suffix || null, 
-        address, age || null, contact || null, e_waste_type, weight, 
-        photo_url || null, consent, reward_points
+        userId || null, 
+        first_name, 
+        middle_name || null, 
+        last_name, 
+        suffix || null, 
+        address, 
+        age ? parseInt(age) : null, 
+        contact || null, 
+        e_waste_type, 
+        weight, 
+        photo_url || null, 
+        consent, 
+        reward_points
       ]
     );
 
@@ -229,9 +239,15 @@ app.post('/api/e-waste-only', async (req, res) => {
       message: 'E-waste record added to Barangay Burol 1 records!',
       data: result.rows[0]
     });
+
   } catch (error) {
-    console.error('Database Error:', error);
-    res.status(500).json({ error: 'Database rejected the entry. Check if weight is a number.' });
+    console.error('DATABASE CRASHED:', error); // This shows in Render Logs
+    // This sends the REAL error to your browser screen:
+    res.status(500).json({ 
+      error: 'Database rejected the entry.', 
+      details: error.message,
+      hint: error.hint 
+    });
   }
 });
 
