@@ -204,30 +204,34 @@ app.post('/api/login', async (req, res) => {
 // NEW ROUTE: For logged-in users submitting E-waste without re-registering
 app.post('/api/e-waste-only', async (req, res) => {
   const { 
-    userId, first_name, last_name, address, 
-    e_waste_type, weight, photo_url, consent 
+    userId, first_name, middle_name, last_name, suffix, 
+    address, age, contact, e_waste_type, weight, photo_url, consent 
   } = req.body;
 
   try {
-    // 1. Calculate reward points (₱5 per kg)
+    // Math: ₱5 per kg
     const reward_points = parseFloat(weight) * 5;
 
-    // 2. Insert the e-waste record linked to the existing userId
+    // This query matches your 15 columns exactly
     const result = await pool.query(
       `INSERT INTO registrations 
-       (user_id, first_name, last_name, address, e_waste_type, weight, photo_url, consent, reward_points) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [userId, first_name, last_name, address, e_waste_type, weight, photo_url || null, consent, reward_points]
+       (user_id, first_name, middle_name, last_name, suffix, address, age, contact, e_waste_type, weight, photo_url, consent, reward_points) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+      [
+        userId, first_name, middle_name || null, last_name, suffix || null, 
+        address, age || null, contact || null, e_waste_type, weight, 
+        photo_url || null, consent, reward_points
+      ]
     );
 
     res.status(201).json({
       success: true,
-      message: 'E-waste record added to your account!',
+      message: 'E-waste record added to Barangay Burol 1 records!',
       data: result.rows[0]
     });
   } catch (error) {
-    console.error('E-waste submission error:', error);
-    res.status(500).json({ error: 'Failed to submit record' });
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Database rejected the entry. Check if weight is a number.' });
   }
 });
 
