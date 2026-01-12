@@ -116,7 +116,7 @@ function RegisterPage() {
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">First Name *</label>
-                  <input type="text" name="first_name" value={formData.first_name} onChange={handleChange} placeholder="Juan" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg" required />
+                  <input type="text" name="first_name" value={formData.first_name} onChange={handleChange} placeholder="Juan" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg"  />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Middle Name</label>
@@ -124,7 +124,7 @@ function RegisterPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Last Name *</label>
-                  <input type="text" name="last_name" value={formData.last_name} onChange={handleChange} placeholder="Cruz" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg" required />
+                  <input type="text" name="last_name" value={formData.last_name} onChange={handleChange} placeholder="Cruz" className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg"  />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Suffix</label>
