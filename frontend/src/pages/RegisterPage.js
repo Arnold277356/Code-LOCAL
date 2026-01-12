@@ -63,7 +63,13 @@ function RegisterPage() {
             return;
         }
     }
-
+// --- ADD THIS LOGGING SECTION ---
+  console.log("--- BARANGAY BUROL 1 DEBUG ---");
+  console.log("Logged In?:", isLoggedIn);
+  console.log("User Data from Storage:", loggedInUser);
+  console.log("User ID:", loggedInUser?.id);
+  console.log("Payload Sending to Server:", payload);
+  // --------------------------------
     setLoading(true);
 
     try {
@@ -72,8 +78,13 @@ function RegisterPage() {
       const endpoint = isLoggedIn ? '/api/e-waste-only' : '/api/registrations';
       
       const payload = isLoggedIn 
-        ? { ...formData, userId: loggedInUser.id } // Attach ID if logged in
-        : formData;
+  ? { 
+      ...formData, 
+      userId: loggedInUser.id,
+      weight: parseFloat(formData.weight), // This forces it to be a number
+      age: formData.age ? parseInt(formData.age) : null // Forces age to be a number too
+    } 
+  : formData;
 
       const response = await fetch(`https://burol-1-web-backend.onrender.com${endpoint}`, {
         method: 'POST',
