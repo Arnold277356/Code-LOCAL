@@ -11,6 +11,7 @@ import RegisterPage from './pages/RegisterPage';
 import IncentivesPage from './pages/IncentivesPage';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   const [announcements, setAnnouncements] = useState([]);
@@ -62,6 +63,7 @@ function AppContent({ announcements, dropOffs }) {
           <Route path="/incentives" element={<IncentivesPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/admin-panel" element={<AdminDashboard />} />
         </Routes>
       </main>
       <Footer />
