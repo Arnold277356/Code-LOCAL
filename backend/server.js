@@ -180,6 +180,26 @@ app.post('/api/registrations', async (req, res) => {
   }
 });
 
+// GET ALL REGISTRATIONS (Admin View)
+app.get('/api/admin/registrations', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        r.*, 
+        u.first_name, 
+        u.last_name, 
+        u.email 
+      FROM registrations r
+      LEFT JOIN users u ON r.user_id = u.id
+      ORDER BY r.created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch all records' });
+  }
+});
+
 // LOGIN
 app.post('/api/login', async (req, res) => {
   try {
