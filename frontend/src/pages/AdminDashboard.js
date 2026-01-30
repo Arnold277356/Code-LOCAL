@@ -5,15 +5,22 @@ function AdminDashboard() {
   const [allDrops, setAllDrops] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetch('https://burol-1-web-backend.onrender.com')
-      .then(res => res.json())
-      .then(data => {
-        setAllDrops(data);
-        setLoading(false);
-      })
-      .catch(err => console.error("Admin fetch error:", err));
-  }, []);
+useEffect(() => {
+  // Use the FULL HTTPS URL of your Render backend
+  fetch('https://burol-1-web-backend.onrender.com')
+    .then(res => {
+      if (!res.ok) throw new Error('Network response was not ok');
+      return res.json();
+    })
+    .then(data => {
+      setAllDrops(data);
+      setLoading(false);
+    })
+    .catch(err => {
+      console.error("Admin fetch error:", err);
+      setLoading(false);
+    });
+}, []);
 
   const totalWeight = allDrops.reduce((sum, item) => sum + parseFloat(item.weight || 0), 0);
 
