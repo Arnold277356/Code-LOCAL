@@ -7,7 +7,7 @@ function AdminDashboard() {
 
 useEffect(() => {
   // Use the FULL HTTPS URL of your Render backend
-  fetch('https://burol-1-web-backend.onrender.com')
+  fetch('https://burol-1-web-backend.onrender.com/api/admin/registrations') 
     .then(res => {
       if (!res.ok) throw new Error('Network response was not ok');
       return res.json();
