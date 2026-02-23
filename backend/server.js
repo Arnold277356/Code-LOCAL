@@ -3,6 +3,19 @@ const cors = require('cors');
 const { Pool } = require('pg');
 const cloudinary = require('cloudinary').v2;
 const bcrypt = require('bcrypt');
+const axios = require('axios');
+const sendSMS = async (number, message) => {
+  try {
+    const response = await axios.post('https://sms-api-ph.netlify.app/api/send', {
+      apiKey: process.env.SMS_API_KEY, // Put your key in .env
+      number: number,
+      message: message
+    });
+    console.log('✓ SMS Status:', response.data.message);
+  } catch (error) {
+    console.error('SMS Failed:', error.response?.data || error.message);
+  }
+};
 require('dotenv').config();
 
 // Helper to clean inputs
@@ -174,6 +187,14 @@ app.post('/api/registrations', async (req, res) => {
     );
 
     await client.query('COMMIT');
+    // ... after your database COMMIT ...
+
+const smsText = `Brgy Burol 1: Hello ${first_name}, we received your ${weight}kg of ${e_waste_type}. You earned ${reward_points} points!`;
+
+// Note: Ensure 'contact' is a valid mobile number (e.g., 09123456789)
+sendSMS(contact, smsText);
+
+res.status(201).json({ success: true, message: 'Registration successful!' });g
     res.status(201).json({ success: true, registration: regRes.rows[0], message: 'Registration successful!' });
   } catch (error) {
     await client.query('ROLLBACK');
