@@ -95,7 +95,12 @@
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+        
       `);
+      await pool.query(`
+      ALTER TABLE registrations 
+      ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Pending';
+    `);
 
       console.log('✓ Database tables initialized and ready');
     } catch (error) {
@@ -214,7 +219,6 @@ app.post('/api/admin/login', async (req, res) => {
   // GET ALL REGISTRATIONS (Admin View)
   app.get('/api/admin/registrations', async (req, res) => {
   try {
-    // Check for admin token in request header
     const providedToken = req.headers['x-admin-token'];
     const adminToken = process.env.ADMIN_SECRET_TOKEN;
 
@@ -224,18 +228,55 @@ app.post('/api/admin/login', async (req, res) => {
 
     const result = await pool.query(`
       SELECT 
-        r.id, 
-        r.e_waste_type, 
-        r.weight, 
-        r.reward_points, 
+        r.id,
+        r.e_waste_type,
+        r.weight,
+        r.reward_points,
         r.created_at,
-        u.first_name, 
-        u.last_name 
+        r.status,
+        r.contact,
+        u.first_name,
+        u.last_name
       FROM registrations r
       LEFT JOIN users u ON r.user_id = u.id
       ORDER BY r.created_at DESC
     `);
     res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+
+// STEP 3: Add this new PATCH route to update donation status
+app.patch('/api/admin/registrations/:id/status', async (req, res) => {
+  try {
+    const providedToken = req.headers['x-admin-token'];
+    const adminToken = process.env.ADMIN_SECRET_TOKEN;
+
+    if (!providedToken || providedToken !== adminToken) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = ['Pending', 'In Progress', 'Done', 'Rejected'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const result = await pool.query(
+      'UPDATE registrations SET status = $1 WHERE id = $2 RETURNING *',
+      [status, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+
+    res.json({ success: true, registration: result.rows[0] });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server Error' });
@@ -377,6 +418,7 @@ app.post('/api/admin/login', async (req, res) => {
   const PORT = process.env.PORT || 5000;
   initializeDatabase().then(() => {
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    
   });
 
   module.exports = app;
