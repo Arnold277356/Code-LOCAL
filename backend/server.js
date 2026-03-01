@@ -95,7 +95,7 @@
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
-        
+
       `);
       await pool.query(`
       ALTER TABLE registrations 
@@ -306,53 +306,61 @@ app.patch('/api/admin/registrations/:id/status', async (req, res) => {
 
   // NEW ROUTE: For logged-in users submitting E-waste without re-registering
   app.post('/api/e-waste-only', async (req, res) => {
-    const { 
-      userId, first_name, middle_name, last_name, suffix, 
-      address, age, contact, e_waste_type, weight, photo_url, consent 
-    } = req.body;
+  const { 
+    userId, address, age, contact, e_waste_type, weight, photo_url, consent 
+  } = req.body;
 
-    try {
-      // Math: ₱5 per kg
-      const reward_points = parseFloat(weight) * 5;
+  try {
+    // 1. First, fetch the user's name from the users table using their ID
+    const userLookup = await pool.query(
+      'SELECT first_name, middle_name, last_name, suffix FROM users WHERE id = $1',
+      [userId]
+    );
 
-      // This query matches your 15 columns exactly
-      const result = await pool.query(
-        `INSERT INTO registrations 
-        (user_id, first_name, middle_name, last_name, suffix, address, age, contact, e_waste_type, weight, photo_url, consent, reward_points) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
-        [
-          userId || null, 
-          first_name, 
-          middle_name || null, 
-          last_name, 
-          suffix || null, 
-          address, 
-          age ? parseInt(age) : null, 
-          contact || null, 
-          e_waste_type, 
-          weight, 
-          photo_url || null, 
-          consent, 
-          reward_points
-        ]
-      );
-
-      res.status(201).json({
-        success: true,
-        message: 'E-waste record added to Barangay Burol 1 records!',
-        data: result.rows[0]
-      });
-
-    } catch (error) {
-      console.error('DATABASE CRASHED:', error); // This shows in Render Logs
-      // This sends the REAL error to your browser screen:
-      res.status(500).json({ 
-        error: 'Database rejected the entry.', 
-        details: error.message,
-        hint: error.hint 
-      });
+    if (userLookup.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found. Please log in again.' });
     }
-  });
+
+    const user = userLookup.rows[0];
+    const reward_points = parseFloat(weight) * 5;
+
+    // 2. Now insert into registrations using the names we just found
+    const result = await pool.query(
+      `INSERT INTO registrations 
+      (user_id, first_name, middle_name, last_name, suffix, address, age, contact, e_waste_type, weight, photo_url, consent, reward_points, status) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+      [
+        userId, 
+        user.first_name, 
+        user.middle_name, 
+        user.last_name, 
+        user.suffix, 
+        address || 'Barangay Burol 1', 
+        age ? parseInt(age) : null, 
+        contact || null, 
+        e_waste_type, 
+        weight, 
+        photo_url || null, 
+        consent, 
+        reward_points,
+        'Pending'
+      ]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'E-waste record added successfully!',
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('DATABASE ERROR:', error.message);
+    res.status(500).json({ 
+      error: 'Database rejected the entry.', 
+      details: error.message 
+    });
+  }
+});
 
   /* ===================== OTHER FEATURES ===================== */
 
