@@ -98,20 +98,16 @@
         
       `);
       await pool.query(`
-      ALTER TABLE registrations 
+      ALTER TABLE registrations
       ADD COLUMN IF NOT EXISTS middle_name VARCHAR(255),
       ADD COLUMN IF NOT EXISTS suffix VARCHAR(50),
-      ADD COLUMN IF NOT EXISTS contact VARCHAR(20),
-      ADD COLUMN IF NOT EXISTS photo_url TEXT,
-      ADD COLUMN IF NOT EXISTS reward_points DECIMAL(10, 2) DEFAULT 0,
       ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Pending';
     `);
-
-      console.log('✓ Database tables initialized and ready');
-    } catch (error) {
-      console.error('Database initialization error:', error);
-    }
-  };
+    console.log('✓ Database columns synchronized');
+  } catch (error) {
+    console.error('Database sync error:', error);
+  }
+};
 
   /* ===================== ROUTES ===================== */
 
@@ -311,51 +307,46 @@ app.patch('/api/admin/registrations/:id/status', async (req, res) => {
 
   // NEW ROUTE: For logged-in users submitting E-waste without re-registering
   app.post('/api/e-waste-only', async (req, res) => {
-  const { userId, address, age, contact, e_waste_type, weight, photo_url, consent } = req.body;
-
-  if (!userId) return res.status(400).json({ error: 'User session expired. Please log in again.' });
+  const { userId, dropoff_address, e_waste_type, weight, consent } = req.body;
 
   try {
-    // 1. Fetch the user's name so we don't send NULL to the database
+    // 1. Fetch the names from the users table so they aren't NULL
     const userLookup = await pool.query(
       'SELECT first_name, middle_name, last_name, suffix FROM users WHERE id = $1',
       [userId]
     );
 
     if (userLookup.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found.' });
+      return res.status(404).json({ error: 'User not found' });
     }
 
     const user = userLookup.rows[0];
     const reward_points = parseFloat(weight || 0) * 5;
 
-    // 2. Insert into registrations using the user's real name found above
+    // 2. Use the found names to fill the registration
     await pool.query(
       `INSERT INTO registrations 
-      (user_id, first_name, middle_name, last_name, suffix, address, age, contact, e_waste_type, weight, photo_url, consent, reward_points, status) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      (user_id, first_name, middle_name, last_name, suffix, address, age, e_waste_type, weight, consent, reward_points, status) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
       [
         userId, 
         user.first_name, 
         user.middle_name, 
         user.last_name, 
         user.suffix, 
-        address || 'Barangay Burol 1', 
-        age ? parseInt(age) : 0, 
-        contact || null, 
+        dropoff_address || 'Barangay Burol 1', 
+        0, // Default age if missing
         e_waste_type, 
         weight, 
-        photo_url || null, 
         consent || false, 
-        reward_points,
+        reward_points, 
         'Pending'
       ]
     );
 
-    res.status(201).json({ success: true, message: 'E-waste record added!' });
-
+    res.status(201).json({ success: true, message: 'Success!' });
   } catch (error) {
-    console.error('DATABASE ERROR:', error.message);
+    console.error('DEBUG:', error.message);
     res.status(500).json({ error: 'Database rejected the entry.', details: error.message });
   }
 });
