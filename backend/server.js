@@ -142,49 +142,55 @@
 
   // REGISTER (Account + E-waste)
   app.post('/api/registrations', async (req, res) => {
-    const client = await pool.connect();
-    try {
-      const { 
-        first_name, middle_name, last_name, suffix, address, age, contact, 
-        e_waste_type, weight, photo_url, consent,
-        username, email, password, confirm_password, security_question, security_answer
-      } = req.body;
+  const client = await pool.connect();
+  try {
+    const { 
+      first_name, middle_name, last_name, suffix, address, age, contact, 
+      e_waste_type, weight, photo_url, consent,
+      username, email, password, confirm_password, security_question, security_answer
+    } = req.body;
 
-      if (password !== confirm_password) return res.status(400).json({ error: 'Passwords do not match' });
+    if (password !== confirm_password) return res.status(400).json({ error: 'Passwords do not match' });
 
-      const normalized = normalizeUserInput(username, email);
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const hashedAnswer = await bcrypt.hash(security_answer, 10);
+    const normalized = normalizeUserInput(username, email);
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedAnswer = await bcrypt.hash(security_answer, 10);
+
+    await client.query('BEGIN');
+
+    // Always create the user account
+    const userRes = await client.query(
+      `INSERT INTO users (username, email, password, first_name, last_name, contact, photo_url, security_question, security_answer)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+      [normalized.username, normalized.email, hashedPassword, first_name, last_name, contact || null, photo_url || null, security_question, hashedAnswer]
+    );
+
+    const userId = userRes.rows[0].id;
+
+    // Only insert e-waste if all required fields are present
+    const hasEWaste = e_waste_type && weight && address;
+
+    if (hasEWaste) {
       const reward_points = parseFloat(weight) * 5;
-
-      await client.query('BEGIN');
-      
-      const userRes = await client.query(
-        `INSERT INTO users (username, email, password, first_name, last_name, contact, photo_url, security_question, security_answer)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-        [normalized.username, normalized.email, hashedPassword, first_name, last_name, contact || null, photo_url, security_question, hashedAnswer]
-      );
-
-      const userId = userRes.rows[0].id;
-
-      const regRes = await client.query(
+      await client.query(
         `INSERT INTO registrations (user_id, first_name, middle_name, last_name, suffix, address, age, contact, e_waste_type, weight, photo_url, consent, reward_points)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
-        [userId, first_name, middle_name || null, last_name, suffix || null, address, age, contact || null, e_waste_type, weight, photo_url, consent, reward_points]
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+        [userId, first_name, middle_name || null, last_name, suffix || null, address, age || null, contact || null, e_waste_type, weight, photo_url || null, consent, reward_points]
       );
-
-      await client.query('COMMIT');
-      // ... after your database COMMIT ...
-
-      res.status(201).json({ success: true, registration: regRes.rows[0], message: 'Registration successful!' });
-    } catch (error) {
-      await client.query('ROLLBACK');
-      if (error.code === '23505') return res.status(400).json({ error: 'Username or Email already exists' });
-      res.status(500).json({ error: 'Failed to register' });
-    } finally {
-      client.release();
     }
-  });
+
+    await client.query('COMMIT');
+    res.status(201).json({ success: true, message: 'Registration successful!' });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    if (error.code === '23505') return res.status(400).json({ error: 'Username or Email already exists' });
+    console.error('Registration error:', error);
+    res.status(500).json({ error: 'Failed to register', details: error.message });
+  } finally {
+    client.release();
+  }
+});
 
 app.post('/api/admin/login', async (req, res) => {
   try {
