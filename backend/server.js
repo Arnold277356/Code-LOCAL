@@ -311,45 +311,40 @@ app.patch('/api/admin/registrations/:id/status', async (req, res) => {
 
   // NEW ROUTE: For logged-in users submitting E-waste without re-registering
   app.post('/api/e-waste-only', async (req, res) => {
-  const { 
-    userId, address, age, contact, e_waste_type, weight, photo_url, consent 
-  } = req.body;
+  const { userId, address, age, contact, e_waste_type, weight, photo_url, consent } = req.body;
 
-  // 1. Safety Check: Stop if no userId is sent
-  if (!userId) {
-    return res.status(400).json({ error: 'User ID is missing. Please log in again.' });
-  }
+  if (!userId) return res.status(400).json({ error: 'User session expired. Please log in again.' });
 
   try {
-    // 2. Lookup the user's name in the database (Prevents NOT NULL errors)
+    // 1. Fetch the user's name so we don't send NULL to the database
     const userLookup = await pool.query(
       'SELECT first_name, middle_name, last_name, suffix FROM users WHERE id = $1',
       [userId]
     );
 
     if (userLookup.rows.length === 0) {
-      return res.status(404).json({ error: 'User account not found.' });
+      return res.status(404).json({ error: 'User not found.' });
     }
 
     const user = userLookup.rows[0];
     const reward_points = parseFloat(weight || 0) * 5;
 
-    // 3. Insert into registrations using the user's real name from step 2
-    const result = await pool.query(
+    // 2. Insert into registrations using the user's real name found above
+    await pool.query(
       `INSERT INTO registrations 
       (user_id, first_name, middle_name, last_name, suffix, address, age, contact, e_waste_type, weight, photo_url, consent, reward_points, status) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
       [
         userId, 
         user.first_name, 
-        user.middle_name || null, 
+        user.middle_name, 
         user.last_name, 
-        user.suffix || null, 
+        user.suffix, 
         address || 'Barangay Burol 1', 
         age ? parseInt(age) : 0, 
         contact || null, 
         e_waste_type, 
-        parseFloat(weight) || 0, 
+        weight, 
         photo_url || null, 
         consent || false, 
         reward_points,
@@ -357,18 +352,11 @@ app.patch('/api/admin/registrations/:id/status', async (req, res) => {
       ]
     );
 
-    res.status(201).json({ 
-      success: true, 
-      message: 'E-waste record added to Barangay Burol 1 records!', 
-      data: result.rows[0] 
-    });
+    res.status(201).json({ success: true, message: 'E-waste record added!' });
 
   } catch (error) {
     console.error('DATABASE ERROR:', error.message);
-    res.status(500).json({ 
-      error: 'Database rejected the entry.', 
-      details: error.message 
-    });
+    res.status(500).json({ error: 'Database rejected the entry.', details: error.message });
   }
 });
 
