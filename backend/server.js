@@ -1,368 +1,350 @@
-const express = require('express');
-const cors = require('cors');
-const { Pool } = require('pg');
-const cloudinary = require('cloudinary').v2;
-const bcrypt = require('bcrypt');
-const axios = require('axios');
-const sendSMS = async (number, message) => {
-  try {
-    const response = await axios.post('https://sms-api-ph.netlify.app/api/send', {
-      apiKey: process.env.SMS_API_KEY, // Put your key in .env
-      number: number,
-      message: message
-    });
-    console.log('✓ SMS Status:', response.data.message);
-  } catch (error) {
-    console.error('SMS Failed:', error.response?.data || error.message);
-  }
-};
-require('dotenv').config();
+  const express = require('express');
+  const cors = require('cors');
+  const { Pool } = require('pg');
+  const cloudinary = require('cloudinary').v2;
+  const bcrypt = require('bcrypt');
+  require('dotenv').config();
 
-// Helper to clean inputs
-const normalizeUserInput = (username, email) => ({
-  username: username.trim().toLowerCase(),
-  email: email.trim().toLowerCase()
-});
+  // Helper to clean inputs
+  const normalizeUserInput = (username, email) => ({
+    username: username.trim().toLowerCase(),
+    email: email.trim().toLowerCase()
+  });
 
-const app = express();
+  const app = express();
 
-// Middleware
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type']
-}));
-app.use(express.json());
+  // Middleware
+  app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type']
+  }));
+  app.use(express.json());
 
-// Cloudinary Configuration
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
+  // Cloudinary Configuration
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+  });
 
-// Database connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
+  // Database connection
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+  });
 
-// Initialize database tables
-const initializeDatabase = async () => {
-  try {
-    // Users table - REMOVED UNIQUE/NOT NULL from contact to allow blank entries
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        username VARCHAR(50) UNIQUE NOT NULL,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        first_name VARCHAR(255) NOT NULL,
-        last_name VARCHAR(255) NOT NULL,
-        contact VARCHAR(20),
-        photo_url TEXT,
-        security_question VARCHAR(255) NOT NULL,
-        security_answer TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
+  // Initialize database tables
+  const initializeDatabase = async () => {
+    try {
+      // Users table - REMOVED UNIQUE/NOT NULL from contact to allow blank entries
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          username VARCHAR(50) UNIQUE NOT NULL,
+          email VARCHAR(255) UNIQUE NOT NULL,
+          password TEXT NOT NULL,
+          first_name VARCHAR(255) NOT NULL,
+          last_name VARCHAR(255) NOT NULL,
+          contact VARCHAR(20),
+          photo_url TEXT,
+          security_question VARCHAR(255) NOT NULL,
+          security_answer TEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
 
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS drop_offs (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        address VARCHAR(255) NOT NULL,
-        latitude DECIMAL(10, 8) NOT NULL,
-        longitude DECIMAL(11, 8) NOT NULL,
-        schedule VARCHAR(255),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS drop_offs (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          address VARCHAR(255) NOT NULL,
+          latitude DECIMAL(10, 8) NOT NULL,
+          longitude DECIMAL(11, 8) NOT NULL,
+          schedule VARCHAR(255),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
 
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS registrations (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        first_name VARCHAR(255) NOT NULL,
-        middle_name VARCHAR(255),
-        last_name VARCHAR(255) NOT NULL,
-        suffix VARCHAR(50),
-        address VARCHAR(255) NOT NULL,
-        age INTEGER NOT NULL,
-        contact VARCHAR(20),
-        e_waste_type VARCHAR(255) NOT NULL,
-        weight DECIMAL(10, 2) NOT NULL,
-        photo_url TEXT,
-        consent BOOLEAN NOT NULL,
-        reward_points DECIMAL(10, 2) DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS registrations (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          first_name VARCHAR(255) NOT NULL,
+          middle_name VARCHAR(255),
+          last_name VARCHAR(255) NOT NULL,
+          suffix VARCHAR(50),
+          address VARCHAR(255) NOT NULL,
+          age INTEGER NOT NULL,
+          contact VARCHAR(20),
+          e_waste_type VARCHAR(255) NOT NULL,
+          weight DECIMAL(10, 2) NOT NULL,
+          photo_url TEXT,
+          consent BOOLEAN NOT NULL,
+          reward_points DECIMAL(10, 2) DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
 
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS announcements (
-        id SERIAL PRIMARY KEY,
-        title VARCHAR(255) NOT NULL,
-        content TEXT NOT NULL,
-        type VARCHAR(50),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS announcements (
+          id SERIAL PRIMARY KEY,
+          title VARCHAR(255) NOT NULL,
+          content TEXT NOT NULL,
+          type VARCHAR(50),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
 
-    console.log('✓ Database tables initialized and ready');
-  } catch (error) {
-    console.error('Database initialization error:', error);
-  }
-};
-
-/* ===================== ROUTES ===================== */
-
-// REGISTER (Account Only)
-app.post('/api/auth/register-only', async (req, res) => {
-  const client = await pool.connect();
-  try {
-    let { username, email, password, first_name, last_name, contact, security_question, security_answer } = req.body;
-
-    if (!username || !email || !password || !security_question || !security_answer) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      console.log('✓ Database tables initialized and ready');
+    } catch (error) {
+      console.error('Database initialization error:', error);
     }
+  };
 
-    const normalized = normalizeUserInput(username, email);
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const hashedAnswer = await bcrypt.hash(security_answer, 10);
+  /* ===================== ROUTES ===================== */
 
-    await client.query('BEGIN');
-    const result = await client.query(
-      `INSERT INTO users (username, email, password, first_name, last_name, contact, security_question, security_answer)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, username`,
-      [normalized.username, normalized.email, hashedPassword, first_name, last_name, contact || null, security_question, hashedAnswer]
-    );
-    await client.query('COMMIT');
+  // REGISTER (Account Only)
+  app.post('/api/auth/register-only', async (req, res) => {
+    const client = await pool.connect();
+    try {
+      let { username, email, password, first_name, last_name, contact, security_question, security_answer } = req.body;
 
-    res.status(201).json({ success: true, user: result.rows[0], message: 'Account created!' });
-  } catch (error) {
-    await client.query('ROLLBACK');
-    if (error.code === '23505') {
-      const field = error.constraint.includes('username') ? 'Username' : 'Email';
-      return res.status(400).json({ error: `${field} already exists` });
+      if (!username || !email || !password || !security_question || !security_answer) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+
+      const normalized = normalizeUserInput(username, email);
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const hashedAnswer = await bcrypt.hash(security_answer, 10);
+
+      await client.query('BEGIN');
+      const result = await client.query(
+        `INSERT INTO users (username, email, password, first_name, last_name, contact, security_question, security_answer)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, username`,
+        [normalized.username, normalized.email, hashedPassword, first_name, last_name, contact || null, security_question, hashedAnswer]
+      );
+      await client.query('COMMIT');
+
+      res.status(201).json({ success: true, user: result.rows[0], message: 'Account created!' });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      if (error.code === '23505') {
+        const field = error.constraint.includes('username') ? 'Username' : 'Email';
+        return res.status(400).json({ error: `${field} already exists` });
+      }
+      res.status(500).json({ error: 'Registration failed' });
+    } finally {
+      client.release();
     }
-    res.status(500).json({ error: 'Registration failed' });
-  } finally {
-    client.release();
-  }
-});
+  });
 
-// REGISTER (Account + E-waste)
-app.post('/api/registrations', async (req, res) => {
-  const client = await pool.connect();
-  try {
+  // REGISTER (Account + E-waste)
+  app.post('/api/registrations', async (req, res) => {
+    const client = await pool.connect();
+    try {
+      const { 
+        first_name, middle_name, last_name, suffix, address, age, contact, 
+        e_waste_type, weight, photo_url, consent,
+        username, email, password, confirm_password, security_question, security_answer
+      } = req.body;
+
+      if (password !== confirm_password) return res.status(400).json({ error: 'Passwords do not match' });
+
+      const normalized = normalizeUserInput(username, email);
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const hashedAnswer = await bcrypt.hash(security_answer, 10);
+      const reward_points = parseFloat(weight) * 5;
+
+      await client.query('BEGIN');
+      
+      const userRes = await client.query(
+        `INSERT INTO users (username, email, password, first_name, last_name, contact, photo_url, security_question, security_answer)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+        [normalized.username, normalized.email, hashedPassword, first_name, last_name, contact || null, photo_url, security_question, hashedAnswer]
+      );
+
+      const userId = userRes.rows[0].id;
+
+      const regRes = await client.query(
+        `INSERT INTO registrations (user_id, first_name, middle_name, last_name, suffix, address, age, contact, e_waste_type, weight, photo_url, consent, reward_points)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+        [userId, first_name, middle_name || null, last_name, suffix || null, address, age, contact || null, e_waste_type, weight, photo_url, consent, reward_points]
+      );
+
+      await client.query('COMMIT');
+      // ... after your database COMMIT ...
+
+  res.status(201).json({ success: true, message: 'Registration successful!' });
+      res.status(201).json({ success: true, registration: regRes.rows[0], message: 'Registration successful!' });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      if (error.code === '23505') return res.status(400).json({ error: 'Username or Email already exists' });
+      res.status(500).json({ error: 'Failed to register' });
+    } finally {
+      client.release();
+    }
+  });
+
+  // GET ALL REGISTRATIONS (Admin View)
+  app.get('/api/admin/registrations', async (req, res) => {
+    try {
+      const result = await pool.query(`
+        SELECT 
+          r.id, 
+          r.e_waste_type, 
+          r.weight, 
+          r.reward_points, 
+          r.created_at,
+          u.first_name, 
+          u.last_name 
+        FROM registrations r
+        LEFT JOIN users u ON r.user_id = u.id
+        ORDER BY r.created_at DESC
+      `);
+      res.json(result.rows);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Server Error' });
+    }
+  });
+
+  // LOGIN
+  app.post('/api/login', async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      if (!username || !password) return res.status(400).json({ error: 'Required fields missing' });
+
+      const normalized = username.trim().toLowerCase();
+      const result = await pool.query('SELECT * FROM users WHERE username = $1', [normalized]);
+
+      if (result.rows.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
+
+      const user = result.rows[0];
+      const validPass = await bcrypt.compare(password, user.password);
+      if (!validPass) return res.status(401).json({ error: 'Invalid credentials' });
+
+      res.json({ success: true, user: { id: user.id, username: user.username, email: user.email, first_name: user.first_name, last_name: user.last_name } });
+    } catch (error) {
+      res.status(500).json({ error: 'Login failed' });
+    }
+  });
+
+  // NEW ROUTE: For logged-in users submitting E-waste without re-registering
+  app.post('/api/e-waste-only', async (req, res) => {
     const { 
-      first_name, middle_name, last_name, suffix, address, age, contact, 
-      e_waste_type, weight, photo_url, consent,
-      username, email, password, confirm_password, security_question, security_answer
+      userId, first_name, middle_name, last_name, suffix, 
+      address, age, contact, e_waste_type, weight, photo_url, consent 
     } = req.body;
 
-    if (password !== confirm_password) return res.status(400).json({ error: 'Passwords do not match' });
+    try {
+      // Math: ₱5 per kg
+      const reward_points = parseFloat(weight) * 5;
 
-    const normalized = normalizeUserInput(username, email);
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const hashedAnswer = await bcrypt.hash(security_answer, 10);
-    const reward_points = parseFloat(weight) * 5;
+      // This query matches your 15 columns exactly
+      const result = await pool.query(
+        `INSERT INTO registrations 
+        (user_id, first_name, middle_name, last_name, suffix, address, age, contact, e_waste_type, weight, photo_url, consent, reward_points) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+        [
+          userId || null, 
+          first_name, 
+          middle_name || null, 
+          last_name, 
+          suffix || null, 
+          address, 
+          age ? parseInt(age) : null, 
+          contact || null, 
+          e_waste_type, 
+          weight, 
+          photo_url || null, 
+          consent, 
+          reward_points
+        ]
+      );
 
-    await client.query('BEGIN');
-    
-    const userRes = await client.query(
-      `INSERT INTO users (username, email, password, first_name, last_name, contact, photo_url, security_question, security_answer)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-      [normalized.username, normalized.email, hashedPassword, first_name, last_name, contact || null, photo_url, security_question, hashedAnswer]
-    );
+      res.status(201).json({
+        success: true,
+        message: 'E-waste record added to Barangay Burol 1 records!',
+        data: result.rows[0]
+      });
 
-    const userId = userRes.rows[0].id;
+    } catch (error) {
+      console.error('DATABASE CRASHED:', error); // This shows in Render Logs
+      // This sends the REAL error to your browser screen:
+      res.status(500).json({ 
+        error: 'Database rejected the entry.', 
+        details: error.message,
+        hint: error.hint 
+      });
+    }
+  });
 
-    const regRes = await client.query(
-      `INSERT INTO registrations (user_id, first_name, middle_name, last_name, suffix, address, age, contact, e_waste_type, weight, photo_url, consent, reward_points)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
-      [userId, first_name, middle_name || null, last_name, suffix || null, address, age, contact || null, e_waste_type, weight, photo_url, consent, reward_points]
-    );
+  /* ===================== OTHER FEATURES ===================== */
 
-    await client.query('COMMIT');
-    // ... after your database COMMIT ...
+  app.get('/api/drop-offs', async (req, res) => {
+    try {
+      const result = await pool.query('SELECT * FROM drop_offs ORDER BY name');
+      res.json(result.rows.length > 0 ? result.rows : []);
+    } catch (err) { res.status(500).json({ error: 'Failed to fetch locations' }); }
+  });
 
-const smsText = `Brgy Burol 1: Hello ${first_name}, we received your ${weight}kg of ${e_waste_type}. You earned ${reward_points} points!`;
+  app.get('/api/announcements', async (req, res) => {
+    try {
+      const result = await pool.query('SELECT * FROM announcements ORDER BY created_at DESC');
+      res.json(result.rows);
+    } catch (err) { res.status(500).json({ error: 'Failed to fetch announcements' }); }
+  });
 
-// Note: Ensure 'contact' is a valid mobile number (e.g., 09123456789)
-sendSMS(contact, smsText);
+  app.post('/api/upload-photo', async (req, res) => {
+    try {
+      const result = await cloudinary.uploader.upload(req.body.file_data, { folder: 'ecyclehub/registrations' });
+      res.json({ success: true, secure_url: result.secure_url });
+    } catch (err) { res.status(500).json({ error: 'Upload failed' }); }
+  });
 
-res.status(201).json({ success: true, message: 'Registration successful!' });g
-    res.status(201).json({ success: true, registration: regRes.rows[0], message: 'Registration successful!' });
-  } catch (error) {
-    await client.query('ROLLBACK');
-    if (error.code === '23505') return res.status(400).json({ error: 'Username or Email already exists' });
-    res.status(500).json({ error: 'Failed to register' });
-  } finally {
-    client.release();
-  }
-});
+  // GET USER STATS: Sum up weight and points for the Dashboard
+  app.get('/api/user/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
 
-// GET ALL REGISTRATIONS (Admin View)
-app.get('/api/admin/registrations', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT 
-        r.id, 
-        r.e_waste_type, 
-        r.weight, 
-        r.reward_points, 
-        r.created_at,
-        u.first_name, 
-        u.last_name 
-      FROM registrations r
-      LEFT JOIN users u ON r.user_id = u.id
-      ORDER BY r.created_at DESC
-    `);
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server Error' });
-  }
-});
+      // 1. Fetch user profile
+      const userRes = await pool.query('SELECT id, email, first_name, last_name, contact, photo_url FROM users WHERE id = $1', [userId]);
+      
+      // 2. Fetch all e-waste registrations for this user
+      const regRes = await pool.query('SELECT * FROM registrations WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+      
+      // 3. Calculate totals
+      const totalWeight = regRes.rows.reduce((sum, r) => sum + parseFloat(r.weight || 0), 0);
+      const totalRewards = regRes.rows.reduce((sum, r) => sum + parseFloat(r.reward_points || 0), 0);
 
-// LOGIN
-app.post('/api/login', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ error: 'Required fields missing' });
+      // DEBUG: This will show up in your Render Logs!
+      console.log(`User ${userId} has ${regRes.rows.length} records. Total Weight: ${totalWeight}`);
 
-    const normalized = username.trim().toLowerCase();
-    const result = await pool.query('SELECT * FROM users WHERE username = $1', [normalized]);
+      // 4. Send the package to the Dashboard
+      res.json({ 
+        success: true, 
+        user: { 
+          ...userRes.rows[0], 
+          total_registrations: regRes.rows.length, 
+          totalWeight: totalWeight,      // Renamed to match frontend
+          totalRewards: totalRewards,    // Renamed to match frontend
+          registrations: regRes.rows 
+        } 
+      });
 
-    if (result.rows.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
+    } catch (err) { 
+      console.error(err);
+      res.status(500).json({ error: 'Fetch failed' }); 
+    }
+  });
 
-    const user = result.rows[0];
-    const validPass = await bcrypt.compare(password, user.password);
-    if (!validPass) return res.status(401).json({ error: 'Invalid credentials' });
+  app.get('/api/health', (req, res) => res.json({ status: 'Server is running' }));
 
-    res.json({ success: true, user: { id: user.id, username: user.username, email: user.email, first_name: user.first_name, last_name: user.last_name } });
-  } catch (error) {
-    res.status(500).json({ error: 'Login failed' });
-  }
-});
+  const PORT = process.env.PORT || 5000;
+  initializeDatabase().then(() => {
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  });
 
-// NEW ROUTE: For logged-in users submitting E-waste without re-registering
-app.post('/api/e-waste-only', async (req, res) => {
-  const { 
-    userId, first_name, middle_name, last_name, suffix, 
-    address, age, contact, e_waste_type, weight, photo_url, consent 
-  } = req.body;
-
-  try {
-    // Math: ₱5 per kg
-    const reward_points = parseFloat(weight) * 5;
-
-    // This query matches your 15 columns exactly
-    const result = await pool.query(
-      `INSERT INTO registrations 
-       (user_id, first_name, middle_name, last_name, suffix, address, age, contact, e_waste_type, weight, photo_url, consent, reward_points) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
-      [
-        userId || null, 
-        first_name, 
-        middle_name || null, 
-        last_name, 
-        suffix || null, 
-        address, 
-        age ? parseInt(age) : null, 
-        contact || null, 
-        e_waste_type, 
-        weight, 
-        photo_url || null, 
-        consent, 
-        reward_points
-      ]
-    );
-
-    res.status(201).json({
-      success: true,
-      message: 'E-waste record added to Barangay Burol 1 records!',
-      data: result.rows[0]
-    });
-
-  } catch (error) {
-    console.error('DATABASE CRASHED:', error); // This shows in Render Logs
-    // This sends the REAL error to your browser screen:
-    res.status(500).json({ 
-      error: 'Database rejected the entry.', 
-      details: error.message,
-      hint: error.hint 
-    });
-  }
-});
-
-/* ===================== OTHER FEATURES ===================== */
-
-app.get('/api/drop-offs', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM drop_offs ORDER BY name');
-    res.json(result.rows.length > 0 ? result.rows : []);
-  } catch (err) { res.status(500).json({ error: 'Failed to fetch locations' }); }
-});
-
-app.get('/api/announcements', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM announcements ORDER BY created_at DESC');
-    res.json(result.rows);
-  } catch (err) { res.status(500).json({ error: 'Failed to fetch announcements' }); }
-});
-
-app.post('/api/upload-photo', async (req, res) => {
-  try {
-    const result = await cloudinary.uploader.upload(req.body.file_data, { folder: 'ecyclehub/registrations' });
-    res.json({ success: true, secure_url: result.secure_url });
-  } catch (err) { res.status(500).json({ error: 'Upload failed' }); }
-});
-
-// GET USER STATS: Sum up weight and points for the Dashboard
-app.get('/api/user/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params;
-
-    // 1. Fetch user profile
-    const userRes = await pool.query('SELECT id, email, first_name, last_name, contact, photo_url FROM users WHERE id = $1', [userId]);
-    
-    // 2. Fetch all e-waste registrations for this user
-    const regRes = await pool.query('SELECT * FROM registrations WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
-    
-    // 3. Calculate totals
-    const totalWeight = regRes.rows.reduce((sum, r) => sum + parseFloat(r.weight || 0), 0);
-    const totalRewards = regRes.rows.reduce((sum, r) => sum + parseFloat(r.reward_points || 0), 0);
-
-    // DEBUG: This will show up in your Render Logs!
-    console.log(`User ${userId} has ${regRes.rows.length} records. Total Weight: ${totalWeight}`);
-
-    // 4. Send the package to the Dashboard
-    res.json({ 
-      success: true, 
-      user: { 
-        ...userRes.rows[0], 
-        total_registrations: regRes.rows.length, 
-        totalWeight: totalWeight,      // Renamed to match frontend
-        totalRewards: totalRewards,    // Renamed to match frontend
-        registrations: regRes.rows 
-      } 
-    });
-
-  } catch (err) { 
-    console.error(err);
-    res.status(500).json({ error: 'Fetch failed' }); 
-  }
-});
-
-app.get('/api/health', (req, res) => res.json({ status: 'Server is running' }));
-
-const PORT = process.env.PORT || 5000;
-initializeDatabase().then(() => {
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-});
-
-module.exports = app;
+  module.exports = app;
