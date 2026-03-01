@@ -102,6 +102,7 @@ function RegisterPage() {
         username: formData.username,
         email: formData.email,
         password: formData.password,
+        confirm_password: formData.confirm_password,
         security_question: formData.security_question,
         security_answer: formData.security_answer,
         consent: formData.consent,
