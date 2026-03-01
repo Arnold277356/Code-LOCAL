@@ -187,28 +187,55 @@
     }
   });
 
+app.post('/api/admin/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    const adminUsername = process.env.ADMIN_USERNAME;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    const adminToken = process.env.ADMIN_SECRET_TOKEN;
+
+    if (username === adminUsername && password === adminPassword) {
+      // Return the secret token — frontend stores this in localStorage
+      return res.json({ success: true, token: adminToken });
+    }
+
+    return res.status(401).json({ error: 'Invalid admin credentials' });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
   // GET ALL REGISTRATIONS (Admin View)
   app.get('/api/admin/registrations', async (req, res) => {
-    try {
-      const result = await pool.query(`
-        SELECT 
-          r.id, 
-          r.e_waste_type, 
-          r.weight, 
-          r.reward_points, 
-          r.created_at,
-          u.first_name, 
-          u.last_name 
-        FROM registrations r
-        LEFT JOIN users u ON r.user_id = u.id
-        ORDER BY r.created_at DESC
-      `);
-      res.json(result.rows);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Server Error' });
+  try {
+    // Check for admin token in request header
+    const providedToken = req.headers['x-admin-token'];
+    const adminToken = process.env.ADMIN_SECRET_TOKEN;
+
+    if (!providedToken || providedToken !== adminToken) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
-  });
+
+    const result = await pool.query(`
+      SELECT 
+        r.id, 
+        r.e_waste_type, 
+        r.weight, 
+        r.reward_points, 
+        r.created_at,
+        u.first_name, 
+        u.last_name 
+      FROM registrations r
+      LEFT JOIN users u ON r.user_id = u.id
+      ORDER BY r.created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
 
   // LOGIN
   app.post('/api/login', async (req, res) => {

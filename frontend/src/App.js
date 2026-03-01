@@ -12,6 +12,8 @@ import IncentivesPage from './pages/IncentivesPage';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminLoginPage from './pages/AdminLoginPage';
+import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 
 function App() {
   const [announcements, setAnnouncements] = useState([]);
@@ -63,7 +65,19 @@ function AppContent({ announcements, dropOffs }) {
           <Route path="/incentives" element={<IncentivesPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/admin-panel" element={<AdminDashboard />} />
+
+          {/* Hidden admin login — not linked anywhere in the UI */}
+          <Route path="/admin-login" element={<AdminLoginPage />} />
+
+          {/* Protected admin dashboard — redirects to home if not authenticated */}
+          <Route
+            path="/admin-panel"
+            element={
+              <ProtectedAdminRoute>
+                <AdminDashboard />
+              </ProtectedAdminRoute>
+            }
+          />
         </Routes>
       </main>
       <Footer />
