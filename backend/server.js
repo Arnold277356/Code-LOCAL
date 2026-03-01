@@ -176,7 +176,6 @@
       await client.query('COMMIT');
       // ... after your database COMMIT ...
 
-  res.status(201).json({ success: true, message: 'Registration successful!' });
       res.status(201).json({ success: true, registration: regRes.rows[0], message: 'Registration successful!' });
     } catch (error) {
       await client.query('ROLLBACK');
