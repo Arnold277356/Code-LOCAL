@@ -15,10 +15,10 @@
 
   // Middleware
   app.use(cors({
-    origin: '*',
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type']
-  }));
+  origin: '*',
+  methods: ['GET', 'POST', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'x-admin-token']
+}));
   app.use(express.json());
 
   // Cloudinary Configuration
