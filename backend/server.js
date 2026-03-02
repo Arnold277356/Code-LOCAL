@@ -312,9 +312,9 @@ app.patch('/api/admin/registrations/:id/status', async (req, res) => {
   try {
     // 1. Fetch the names from the users table so they aren't NULL
     const userLookup = await pool.query(
-      'SELECT first_name, middle_name, last_name, suffix FROM users WHERE id = $1',
-      [userId]
-    );
+  'SELECT first_name, last_name FROM users WHERE id = $1',
+  [userId]
+  );
 
     if (userLookup.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
@@ -331,11 +331,11 @@ app.patch('/api/admin/registrations/:id/status', async (req, res) => {
       [
         userId, 
         user.first_name, 
-        user.middle_name, 
+        null,           // middle_name
         user.last_name, 
-        user.suffix, 
+        null,           // suffix
         dropoff_address || 'Barangay Burol 1', 
-        0, // Default age if missing
+        0,
         e_waste_type, 
         weight, 
         consent || false, 
