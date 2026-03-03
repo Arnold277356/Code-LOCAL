@@ -28,7 +28,7 @@ function Footer() {
                 <FaPhone className="contact-icon" />
                 <div>
                   <p className="contact-label">Phone</p>
-                  <p className="contact-value">(02) XXXX-XXXX</p>
+                  <p className="contact-value">09916338752</p>
                 </div>
               </div>
               <div className="contact-item">
