@@ -3,6 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { FaSignOutAlt, FaPlus, FaMapMarkerAlt, FaGift, FaBell } from 'react-icons/fa';
 
+const STATUS_STYLES = {
+  'Pending':     'bg-yellow-100 text-yellow-800',
+  'In Progress': 'bg-blue-100 text-blue-800',
+  'Done':        'bg-emerald-100 text-emerald-700',
+  'Rejected':    'bg-red-100 text-red-700',
+};
+
 function DashboardPage() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
@@ -16,31 +23,27 @@ function DashboardPage() {
       navigate('/login');
       return;
     }
-    setUser(loggedInUser) ;
+    setUser(loggedInUser);
     loadDrops(loggedInUser.id);
   }, [navigate]);
 
   const loadDrops = async (userId) => {
     try {
-      // 1. Updated the URL to match the backend route we fixed
       const response = await fetch(`https://burol-1-web-backend.onrender.com/api/user/${userId}`);
       const data = await response.json();
 
       if (data.success) {
-        // 2. Map the registrations from the 'user' object
         const formattedDrops = data.user.registrations.map(drop => ({
           id: drop.id,
           type: drop.e_waste_type,
           weight: parseFloat(drop.weight),
           date: drop.created_at,
-          location: drop.address || 'Barangay Hall', 
+          location: drop.address || 'Barangay Hall',
           reward: parseFloat(drop.reward_points),
-          status: 'Completed'
+          status: drop.status || 'Pending', // ← now uses real status from database
         }));
 
         setDrops(formattedDrops);
-
-        // 3. Match the names we set in the server.js (totalWeight and totalRewards)
         setTotalWeight(parseFloat(data.user.totalWeight || 0));
         setTotalRewards(parseFloat(data.user.totalRewards || 0));
       }
@@ -136,36 +139,44 @@ function DashboardPage() {
           <div className="lg:col-span-2">
             <div className="bg-white rounded-xl shadow-soft p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Drop History</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b-2 border-gray-200">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Type</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Weight</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 hidden sm:table-cell">Date</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 hidden md:table-cell">Location</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Reward</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {drops.map((drop) => (
-                      <tr key={drop.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <td className="py-3 px-4 font-semibold text-gray-900">{drop.type}</td>
-                        <td className="py-3 px-4 text-emerald-600 font-semibold">{drop.weight} kg</td>
-                        <td className="py-3 px-4 text-gray-600 hidden sm:table-cell">{new Date(drop.date).toLocaleDateString()}</td>
-                        <td className="py-3 px-4 text-gray-600 hidden md:table-cell">{drop.location}</td>
-                        <td className="py-3 px-4 text-emerald-600 font-semibold">₱{drop.reward.toFixed(2)}</td>
-                        <td className="py-3 px-4">
-                          <span className="inline-block px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
-                            {drop.status}
-                          </span>
-                        </td>
+              {drops.length === 0 ? (
+                <div className="text-center py-12 text-gray-400">
+                  <p className="text-4xl mb-3">📭</p>
+                  <p className="font-semibold">No e-waste submissions yet.</p>
+                  <p className="text-sm mt-1">Use the New Drop-off button to get started!</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b-2 border-gray-200">
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Type</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Weight</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 hidden sm:table-cell">Date</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 hidden md:table-cell">Location</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Reward</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {drops.map((drop) => (
+                        <tr key={drop.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                          <td className="py-3 px-4 font-semibold text-gray-900">{drop.type}</td>
+                          <td className="py-3 px-4 text-emerald-600 font-semibold">{drop.weight} kg</td>
+                          <td className="py-3 px-4 text-gray-600 hidden sm:table-cell">{new Date(drop.date).toLocaleDateString()}</td>
+                          <td className="py-3 px-4 text-gray-600 hidden md:table-cell">{drop.location}</td>
+                          <td className="py-3 px-4 text-emerald-600 font-semibold">₱{drop.reward.toFixed(2)}</td>
+                          <td className="py-3 px-4">
+                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${STATUS_STYLES[drop.status] || STATUS_STYLES['Pending']}`}>
+                              {drop.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
 

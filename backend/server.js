@@ -16,7 +16,7 @@
   // Middleware
   app.use(cors({
   origin: '*',
-  methods: ['GET', 'POST', 'PATCH'],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'x-admin-token']
 }));
   app.use(express.json());
@@ -409,6 +409,77 @@ app.patch('/api/admin/registrations/:id/status', async (req, res) => {
       res.status(500).json({ error: 'Fetch failed' }); 
     }
   });
+app.delete('/api/admin/registrations/:id', async (req, res) => {
+  try {
+    const providedToken = req.headers['x-admin-token'];
+    if (!providedToken || providedToken !== process.env.ADMIN_SECRET_TOKEN) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { id } = req.params;
+    await pool.query('DELETE FROM registrations WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete' });
+  }
+});
+
+app.delete('/api/admin/registrations/:id', async (req, res) => {
+  try {
+    const providedToken = req.headers['x-admin-token'];
+    if (!providedToken || providedToken !== process.env.ADMIN_SECRET_TOKEN) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { id } = req.params;
+    await pool.query('DELETE FROM registrations WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete' });
+  }
+});
+
+app.post('/api/admin/announcements', async (req, res) => {
+  try {
+    const providedToken = req.headers['x-admin-token'];
+    if (!providedToken || providedToken !== process.env.ADMIN_SECRET_TOKEN) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { title, content, type } = req.body;
+    if (!title || !content) {
+      return res.status(400).json({ error: 'Title and content are required' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO announcements (title, content, type) VALUES ($1, $2, $3) RETURNING *`,
+      [title, content, type || 'announcement']
+    );
+
+    res.status(201).json({ success: true, announcement: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to post announcement' });
+  }
+});
+
+app.delete('/api/admin/announcements/:id', async (req, res) => {
+  try {
+    const providedToken = req.headers['x-admin-token'];
+    if (!providedToken || providedToken !== process.env.ADMIN_SECRET_TOKEN) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { id } = req.params;
+    await pool.query('DELETE FROM announcements WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete announcement' });
+  }
+});
 
   app.get('/api/health', (req, res) => res.json({ status: 'Server is running' }));
 
