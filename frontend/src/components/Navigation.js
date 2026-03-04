@@ -53,8 +53,18 @@ function Navigation() {
           {/* Language Toggle */}
           <button
             onClick={toggleLanguage}
-            className="nav-link login-link"
-            style={{ background: 'none', border: '1px solid currentColor', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}
+            className="nav-link"
+            style={{ 
+            background: 'none', 
+            border: '2px solid rgba(255,255,255,0.5)', 
+            borderRadius: '8px', 
+            padding: '4px 8px', 
+            cursor: 'pointer', 
+            fontWeight: 'bold', 
+            fontSize: '12px',
+            color: 'white',
+            whiteSpace: 'nowrap'
+          }}
           >
             {language === 'en' ? '🇵🇭 FIL' : '🇺🇸 EN'}
           </button>
