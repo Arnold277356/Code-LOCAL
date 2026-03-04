@@ -12,11 +12,7 @@ function Navigation() {
 
   useEffect(() => {
     const loggedInUser = localStorage.getItem('user');
-    if (loggedInUser) {
-      setUser(JSON.parse(loggedInUser));
-    } else {
-      setUser(null);
-    }
+    setUser(loggedInUser ? JSON.parse(loggedInUser) : null);
   }, [location]);
 
   const toggleMenu = () => setIsOpen(!isOpen);
@@ -38,6 +34,7 @@ function Navigation() {
           <Link to="/updates" className={`nav-link ${isActive('/updates') ? 'active' : ''}`} onClick={closeMenu}>{t.nav.updates}</Link>
           <Link to="/register" className={`nav-link ${isActive('/register') ? 'active' : ''}`} onClick={closeMenu}>{t.nav.register}</Link>
           <Link to="/incentives" className={`nav-link ${isActive('/incentives') ? 'active' : ''}`} onClick={closeMenu}>{t.nav.incentives}</Link>
+          <Link to="/faq" className={`nav-link ${isActive('/faq') ? 'active' : ''}`} onClick={closeMenu}>{t.nav.faq || 'FAQ'}</Link>
 
           {user ? (
             <Link to="/dashboard" className={`nav-link login-link ${isActive('/dashboard') ? 'active' : ''}`} onClick={closeMenu}>
@@ -50,21 +47,10 @@ function Navigation() {
             </Link>
           )}
 
-          {/* Language Toggle */}
           <button
             onClick={toggleLanguage}
-            className="nav-link"
-            style={{ 
-            background: 'none', 
-            border: '2px solid rgba(255,255,255,0.5)', 
-            borderRadius: '8px', 
-            padding: '4px 8px', 
-            cursor: 'pointer', 
-            fontWeight: 'bold', 
-            fontSize: '12px',
-            color: 'white',
-            whiteSpace: 'nowrap'
-          }}
+            className="nav-link login-link"
+            style={{ background: 'none', border: '1px solid currentColor', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}
           >
             {language === 'en' ? '🇵🇭 FIL' : '🇺🇸 EN'}
           </button>

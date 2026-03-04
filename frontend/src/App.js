@@ -12,28 +12,17 @@ import RegisterPage from './pages/RegisterPage';
 import IncentivesPage from './pages/IncentivesPage';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import FAQPage from './pages/FAQPage';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminLoginPage from './pages/AdminLoginPage';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 
 function App() {
-  const [announcements, setAnnouncements] = useState([]);
   const [dropOffs, setDropOffs] = useState([]);
 
   useEffect(() => {
-    fetchAnnouncements();
     fetchDropOffs();
   }, []);
-
-  const fetchAnnouncements = async () => {
-    try {
-      const response = await fetch('https://burol-1-web-backend.onrender.com/api/announcements');
-      const data = await response.json();
-      setAnnouncements(data);
-    } catch (error) {
-      console.error('Error fetching announcements:', error);
-    }
-  };
 
   const fetchDropOffs = async () => {
     try {
@@ -55,11 +44,12 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/education" element={<EducationPage />} />
               <Route path="/map" element={<MapPage dropOffs={dropOffs} />} />
-              <Route path="/updates" element={<UpdatesPage announcements={announcements} />} />
+              <Route path="/updates" element={<UpdatesPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/incentives" element={<IncentivesPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/faq" element={<FAQPage />} />
               <Route path="/admin-login" element={<AdminLoginPage />} />
               <Route
                 path="/admin-panel"
