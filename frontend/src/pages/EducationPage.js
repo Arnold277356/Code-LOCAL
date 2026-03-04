@@ -1,40 +1,26 @@
 import React, { useState } from 'react';
 import { FaChevronDown } from 'react-icons/fa';
+import { useLanguage } from '../context/LanguageContext';
 import './EducationPage.css';
 
 function EducationPage() {
   const [expandedFaq, setExpandedFaq] = useState(null);
+  const { t } = useLanguage();
 
   const faqs = [
-    {
-      id: 1,
-      question: 'Why is e-waste harmful?',
-      answer: 'E-waste contains toxic materials like lead, mercury, and cadmium that can contaminate soil and water. When improperly disposed, these toxins harm ecosystems and human health. Improper burning releases harmful gases, and landfills leak chemicals into groundwater. Responsible recycling prevents environmental damage and recovers valuable materials.'
-    },
-    {
-      id: 2,
-      question: 'What happens when e-waste is recycled properly?',
-      answer: 'Proper recycling recovers valuable materials like gold, copper, and rare earth elements for reuse. Toxic components are safely handled and disposed of. This reduces mining needs, saves energy, and prevents environmental pollution. Recycled materials are used to manufacture new electronics, creating a circular economy and reducing waste in landfills.'
-    },
-    {
-      id: 3,
-      question: 'Did you know?',
-      answer: 'One million smartphones contain 35 times more copper than one ton of copper ore. Recycling one million laptops saves the energy equivalent of powering 3,500 homes for a year. E-waste is the fastest-growing waste stream globally, with over 50 million tons generated annually.'
-    }
+    { id: 1, question: t.education.faq1Q, answer: t.education.faq1A },
+    { id: 2, question: t.education.faq2Q, answer: t.education.faq2A },
+    { id: 3, question: t.education.faq3Q, answer: t.education.faq3A },
   ];
 
-  const toggleFaq = (id) => {
-    setExpandedFaq(expandedFaq === id ? null : id);
-  };
+  const toggleFaq = (id) => setExpandedFaq(expandedFaq === id ? null : id);
 
   return (
     <div className="page-container">
       <section className="education-page">
         <div className="container">
-          <h1 className="page-title">What is E-Waste?</h1>
-          <p className="page-subtitle">
-            Learn about electronic waste and why responsible recycling matters
-          </p>
+          <h1 className="page-title">{t.education.title}</h1>
+          <p className="page-subtitle">{t.education.subtitle}</p>
 
           <div className="education-content">
             <div className="faq-container">
@@ -48,9 +34,7 @@ function EducationPage() {
                     <FaChevronDown className="faq-icon" />
                   </button>
                   {expandedFaq === faq.id && (
-                    <div className="faq-answer">
-                      <p>{faq.answer}</p>
-                    </div>
+                    <div className="faq-answer"><p>{faq.answer}</p></div>
                   )}
                 </div>
               ))}
@@ -60,22 +44,22 @@ function EducationPage() {
               <div className="stat-card">
                 <div className="stat-icon">📱</div>
                 <div className="stat-content">
-                  <h3>50+ Million Tons</h3>
-                  <p>E-waste generated globally per year</p>
+                  <h3>{t.education.stat1Title}</h3>
+                  <p>{t.education.stat1Desc}</p>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-icon">💰</div>
                 <div className="stat-content">
-                  <h3>₱57 Billion</h3>
-                  <p>Value of materials in global e-waste</p>
+                  <h3>{t.education.stat2Title}</h3>
+                  <p>{t.education.stat2Desc}</p>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-icon">⚡</div>
                 <div className="stat-content">
-                  <h3>3,500 Homes</h3>
-                  <p>Energy saved by recycling 1M laptops yearly</p>
+                  <h3>{t.education.stat3Title}</h3>
+                  <p>{t.education.stat3Desc}</p>
                 </div>
               </div>
             </div>
