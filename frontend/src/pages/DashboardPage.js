@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { FaSignOutAlt, FaPlus, FaMapMarkerAlt, FaGift, FaBell } from 'react-icons/fa';
+import { useLanguage } from '../context/LanguageContext';
 
 const STATUS_STYLES = {
   'Pending':     'bg-yellow-100 text-yellow-800',
@@ -16,13 +17,11 @@ function DashboardPage() {
   const [drops, setDrops] = useState([]);
   const [totalWeight, setTotalWeight] = useState(0);
   const [totalRewards, setTotalRewards] = useState(0);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const loggedInUser = JSON.parse(localStorage.getItem('user'));
-    if (!loggedInUser) {
-      navigate('/login');
-      return;
-    }
+    if (!loggedInUser) { navigate('/login'); return; }
     setUser(loggedInUser);
     loadDrops(loggedInUser.id);
   }, [navigate]);
@@ -31,7 +30,6 @@ function DashboardPage() {
     try {
       const response = await fetch(`https://burol-1-web-backend.onrender.com/api/user/${userId}`);
       const data = await response.json();
-
       if (data.success) {
         const formattedDrops = data.user.registrations.map(drop => ({
           id: drop.id,
@@ -40,38 +38,30 @@ function DashboardPage() {
           date: drop.created_at,
           location: drop.address || 'Barangay Hall',
           reward: parseFloat(drop.reward_points),
-          status: drop.status || 'Pending', // ← now uses real status from database
+          status: drop.status || 'Pending',
         }));
-
         setDrops(formattedDrops);
         setTotalWeight(parseFloat(data.user.totalWeight || 0));
         setTotalRewards(parseFloat(data.user.totalRewards || 0));
       }
     } catch (error) {
-      console.error('Error loading drops from Burol 1 Backend:', error);
+      console.error('Error loading drops:', error);
     }
   };
 
   const handleLogout = () => {
     Swal.fire({
       icon: 'question',
-      title: 'Logout?',
-      text: 'Are you sure you want to logout?',
+      title: t.dashboard.logoutConfirm,
+      text: t.dashboard.logoutText,
       showCancelButton: true,
       confirmButtonColor: '#10b981',
       cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Yes, logout'
+      confirmButtonText: t.dashboard.logoutYes
     }).then((result) => {
       if (result.isConfirmed) {
         localStorage.removeItem('user');
-        Swal.fire({
-          icon: 'success',
-          title: 'Logged Out',
-          text: 'You have been logged out successfully',
-          confirmButtonColor: '#10b981'
-        }).then(() => {
-          navigate('/login');
-        });
+        navigate('/login');
       }
     });
   };
@@ -80,7 +70,6 @@ function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
       <div className="bg-gradient-to-r from-emerald-600 to-green-600 text-white sticky top-0 z-40 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -88,79 +77,70 @@ function DashboardPage() {
               <img src="/logo.png" alt="E-Cycle Hub" className="w-8 h-8 object-contain" />
             </div>
             <div>
-              <h1 className="text-lg sm:text-xl font-bold">Dashboard</h1>
-              <p className="text-xs sm:text-sm text-emerald-100">Welcome, {user.first_name || user.username}</p>
+              <h1 className="text-lg sm:text-xl font-bold">{t.dashboard.title}</h1>
+              <p className="text-xs sm:text-sm text-emerald-100">{t.dashboard.welcome} {user.first_name || user.username}</p>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold text-sm transition-all duration-300"
-          >
-            <FaSignOutAlt className="text-base" /> Logout
+          <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold text-sm transition-all">
+            <FaSignOutAlt /> {t.dashboard.logout}
           </button>
         </div>
       </div>
 
-      {/* Stats Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-soft p-6 hover:shadow-medium transition-all duration-300 transform hover:scale-105">
             <div className="text-4xl mb-4">📦</div>
-            <h3 className="text-sm font-semibold text-gray-600 mb-2">Total Drops</h3>
+            <h3 className="text-sm font-semibold text-gray-600 mb-2">{t.dashboard.totalDrops}</h3>
             <p className="text-3xl font-bold text-emerald-600">{drops.length}</p>
-            <p className="text-xs text-gray-500 mt-2">e-waste items</p>
+            <p className="text-xs text-gray-500 mt-2">{t.dashboard.ewasteItems}</p>
           </div>
-
           <div className="bg-white rounded-xl shadow-soft p-6 hover:shadow-medium transition-all duration-300 transform hover:scale-105">
             <div className="text-4xl mb-4">⚖️</div>
-            <h3 className="text-sm font-semibold text-gray-600 mb-2">Total Weight</h3>
+            <h3 className="text-sm font-semibold text-gray-600 mb-2">{t.dashboard.totalWeight}</h3>
             <p className="text-3xl font-bold text-emerald-600">{totalWeight.toFixed(1)} kg</p>
-            <p className="text-xs text-gray-500 mt-2">recycled</p>
+            <p className="text-xs text-gray-500 mt-2">{t.dashboard.recycled}</p>
           </div>
-
           <div className="bg-white rounded-xl shadow-soft p-6 hover:shadow-medium transition-all duration-300 transform hover:scale-105">
             <div className="text-4xl mb-4">💰</div>
-            <h3 className="text-sm font-semibold text-gray-600 mb-2">Total Rewards</h3>
+            <h3 className="text-sm font-semibold text-gray-600 mb-2">{t.dashboard.totalRewards}</h3>
             <p className="text-3xl font-bold text-emerald-600">₱{totalRewards.toFixed(2)}</p>
-            <p className="text-xs text-gray-500 mt-2">earned</p>
+            <p className="text-xs text-gray-500 mt-2">{t.dashboard.earned}</p>
           </div>
-
           <div className="bg-white rounded-xl shadow-soft p-6 hover:shadow-medium transition-all duration-300 transform hover:scale-105">
             <div className="text-4xl mb-4">🌍</div>
-            <h3 className="text-sm font-semibold text-gray-600 mb-2">Environmental Impact</h3>
+            <h3 className="text-sm font-semibold text-gray-600 mb-2">{t.dashboard.envImpact}</h3>
             <p className="text-3xl font-bold text-emerald-600">{(totalWeight * 10).toFixed(0)}</p>
-            <p className="text-xs text-gray-500 mt-2">kg CO₂ saved</p>
+            <p className="text-xs text-gray-500 mt-2">{t.dashboard.co2Saved}</p>
           </div>
         </div>
 
-        {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Drop History */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-xl shadow-soft p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Drop History</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">{t.dashboard.dropHistory}</h2>
               {drops.length === 0 ? (
                 <div className="text-center py-12 text-gray-400">
                   <p className="text-4xl mb-3">📭</p>
-                  <p className="font-semibold">No e-waste submissions yet.</p>
-                  <p className="text-sm mt-1">Use the New Drop-off button to get started!</p>
+                  <p className="font-semibold">{t.dashboard.noDrops}</p>
+                  <p className="text-sm mt-1">{t.dashboard.noDropsHint}</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b-2 border-gray-200">
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Type</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Weight</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 hidden sm:table-cell">Date</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 hidden md:table-cell">Location</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Reward</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">{t.dashboard.type}</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">{t.dashboard.weight}</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 hidden sm:table-cell">{t.dashboard.date}</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 hidden md:table-cell">{t.dashboard.location}</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">{t.dashboard.reward}</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">{t.dashboard.status}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {drops.map((drop) => (
-                        <tr key={drop.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                        <tr key={drop.id} className="border-b border-gray-100 hover:bg-gray-50">
                           <td className="py-3 px-4 font-semibold text-gray-900">{drop.type}</td>
                           <td className="py-3 px-4 text-emerald-600 font-semibold">{drop.weight} kg</td>
                           <td className="py-3 px-4 text-gray-600 hidden sm:table-cell">{new Date(drop.date).toLocaleDateString()}</td>
@@ -180,62 +160,27 @@ function DashboardPage() {
             </div>
           </div>
 
-          {/* Quick Actions */}
           <div>
             <div className="bg-white rounded-xl shadow-soft p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Quick Actions</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">{t.dashboard.quickActions}</h2>
               <div className="space-y-3">
-                <button
-                  onClick={() => navigate('/register')}
-                  className="w-full p-4 bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-lg hover:border-emerald-600 hover:shadow-medium transition-all duration-300 text-left group"
-                >
-                  <div className="flex items-center gap-3">
-                    <FaPlus className="text-emerald-600 text-lg group-hover:scale-125 transition-transform" />
-                    <div>
-                      <h3 className="font-bold text-gray-900">New Drop-off</h3>
-                      <p className="text-xs text-gray-600">Register e-waste</p>
+                {[
+                  { icon: <FaPlus />, title: t.dashboard.newDropoff, desc: t.dashboard.newDropoffDesc, path: '/register' },
+                  { icon: <FaMapMarkerAlt />, title: t.dashboard.findLocation, desc: t.dashboard.findLocationDesc, path: '/map' },
+                  { icon: <FaGift />, title: t.dashboard.viewRewards, desc: t.dashboard.viewRewardsDesc, path: '/incentives' },
+                  { icon: <FaBell />, title: t.dashboard.updates, desc: t.dashboard.updatesDesc, path: '/updates' },
+                ].map((action, i) => (
+                  <button key={i} onClick={() => navigate(action.path)}
+                    className="w-full p-4 bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-lg hover:border-emerald-600 transition-all text-left group">
+                    <div className="flex items-center gap-3">
+                      <span className="text-emerald-600 text-lg group-hover:scale-125 transition-transform">{action.icon}</span>
+                      <div>
+                        <h3 className="font-bold text-gray-900">{action.title}</h3>
+                        <p className="text-xs text-gray-600">{action.desc}</p>
+                      </div>
                     </div>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => navigate('/map')}
-                  className="w-full p-4 bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-lg hover:border-emerald-600 hover:shadow-medium transition-all duration-300 text-left group"
-                >
-                  <div className="flex items-center gap-3">
-                    <FaMapMarkerAlt className="text-emerald-600 text-lg group-hover:scale-125 transition-transform" />
-                    <div>
-                      <h3 className="font-bold text-gray-900">Find Location</h3>
-                      <p className="text-xs text-gray-600">Nearest drop-off</p>
-                    </div>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => navigate('/incentives')}
-                  className="w-full p-4 bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-lg hover:border-emerald-600 hover:shadow-medium transition-all duration-300 text-left group"
-                >
-                  <div className="flex items-center gap-3">
-                    <FaGift className="text-emerald-600 text-lg group-hover:scale-125 transition-transform" />
-                    <div>
-                      <h3 className="font-bold text-gray-900">View Rewards</h3>
-                      <p className="text-xs text-gray-600">Reward details</p>
-                    </div>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => navigate('/updates')}
-                  className="w-full p-4 bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-lg hover:border-emerald-600 hover:shadow-medium transition-all duration-300 text-left group"
-                >
-                  <div className="flex items-center gap-3">
-                    <FaBell className="text-emerald-600 text-lg group-hover:scale-125 transition-transform" />
-                    <div>
-                      <h3 className="font-bold text-gray-900">Updates</h3>
-                      <p className="text-xs text-gray-600">Latest news</p>
-                    </div>
-                  </div>
-                </button>
+                  </button>
+                ))}
               </div>
             </div>
           </div>

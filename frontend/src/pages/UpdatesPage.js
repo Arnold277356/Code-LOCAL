@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 import './UpdatesPage.css';
 
 function UpdatesPage({ announcements }) {
   const [filter, setFilter] = useState('all');
+  const { t } = useLanguage();
 
   const defaultAnnouncements = [
     {
@@ -15,7 +17,7 @@ function UpdatesPage({ announcements }) {
     {
       id: 2,
       title: 'Temporary Closure Notice',
-      content: 'The Community Center drop-off point will be temporarily closed on December 25-26 for maintenance. Please use alternative locations.',
+      content: 'The Community Center drop-off point will be temporarily closed on December 25-26 for maintenance.',
       type: 'notice',
       created_at: new Date(Date.now() - 86400000).toISOString()
     },
@@ -29,47 +31,33 @@ function UpdatesPage({ announcements }) {
   ];
 
   const displayAnnouncements = announcements && announcements.length > 0 ? announcements : defaultAnnouncements;
-
-  const filteredAnnouncements = filter === 'all' 
-    ? displayAnnouncements 
-    : displayAnnouncements.filter(a => a.type === filter);
+  const filteredAnnouncements = filter === 'all' ? displayAnnouncements : displayAnnouncements.filter(a => a.type === filter);
 
   const getTypeColor = (type) => {
     switch(type) {
-      case 'collection':
-        return 'type-collection';
-      case 'notice':
-        return 'type-notice';
-      case 'announcement':
-        return 'type-announcement';
-      default:
-        return 'type-announcement';
+      case 'collection': return 'type-collection';
+      case 'notice': return 'type-notice';
+      case 'announcement': return 'type-announcement';
+      default: return 'type-announcement';
     }
   };
 
   const getTypeLabel = (type) => {
     switch(type) {
-      case 'collection':
-        return '📅 Collection';
-      case 'notice':
-        return '⚠️ Notice';
-      case 'announcement':
-        return '📢 Announcement';
-      default:
-        return '📢 Update';
+      case 'collection': return '📅 Collection';
+      case 'notice': return '⚠️ Notice';
+      case 'announcement': return '📢 Announcement';
+      default: return '📢 Update';
     }
   };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
+    const diffDays = Math.ceil(Math.abs(now - date) / (1000 * 60 * 60 * 24));
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays} days ago`;
-    
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
@@ -77,36 +65,14 @@ function UpdatesPage({ announcements }) {
     <div className="page-container">
       <section className="updates-page">
         <div className="container">
-          <h1 className="page-title">Collection Updates & Announcements</h1>
-          <p className="page-subtitle">
-            Stay informed about collection schedules and important notices
-          </p>
+          <h1 className="page-title">{t.updates.title}</h1>
+          <p className="page-subtitle">{t.updates.subtitle}</p>
 
           <div className="filter-buttons">
-            <button
-              className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
-              onClick={() => setFilter('all')}
-            >
-              All Updates
-            </button>
-            <button
-              className={`filter-btn ${filter === 'collection' ? 'active' : ''}`}
-              onClick={() => setFilter('collection')}
-            >
-              Collection
-            </button>
-            <button
-              className={`filter-btn ${filter === 'notice' ? 'active' : ''}`}
-              onClick={() => setFilter('notice')}
-            >
-              Notices
-            </button>
-            <button
-              className={`filter-btn ${filter === 'announcement' ? 'active' : ''}`}
-              onClick={() => setFilter('announcement')}
-            >
-              Announcements
-            </button>
+            <button className={`filter-btn ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>{t.updates.all}</button>
+            <button className={`filter-btn ${filter === 'collection' ? 'active' : ''}`} onClick={() => setFilter('collection')}>{t.updates.collection}</button>
+            <button className={`filter-btn ${filter === 'notice' ? 'active' : ''}`} onClick={() => setFilter('notice')}>{t.updates.notices}</button>
+            <button className={`filter-btn ${filter === 'announcement' ? 'active' : ''}`} onClick={() => setFilter('announcement')}>{t.updates.announcements}</button>
           </div>
 
           <div className="announcements-container">
@@ -114,12 +80,8 @@ function UpdatesPage({ announcements }) {
               filteredAnnouncements.map((announcement) => (
                 <div key={announcement.id} className={`announcement-card ${getTypeColor(announcement.type)}`}>
                   <div className="announcement-header">
-                    <span className="announcement-type">
-                      {getTypeLabel(announcement.type)}
-                    </span>
-                    <span className="announcement-date">
-                      {formatDate(announcement.created_at)}
-                    </span>
+                    <span className="announcement-type">{getTypeLabel(announcement.type)}</span>
+                    <span className="announcement-date">{formatDate(announcement.created_at)}</span>
                   </div>
                   <h3 className="announcement-title">{announcement.title}</h3>
                   <p className="announcement-content">{announcement.content}</p>
@@ -127,15 +89,13 @@ function UpdatesPage({ announcements }) {
               ))
             ) : (
               <div className="no-announcements">
-                <p>No announcements at this time. Check back soon!</p>
+                <p>{t.updates.noAnnouncements}</p>
               </div>
             )}
           </div>
 
           <div className="updates-note">
-            <p>
-              <strong>💡 Tip:</strong> Follow our Barangay Facebook page for real-time updates and announcements. You can also visit the Barangay Hall for more information.
-            </p>
+            <p><strong>{t.updates.tip}</strong> {t.updates.tipText}</p>
           </div>
         </div>
       </section>

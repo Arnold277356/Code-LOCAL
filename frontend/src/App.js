@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
+import { LanguageProvider } from './context/LanguageContext';
 import Navigation from './components/Navigation';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
@@ -26,7 +27,7 @@ function App() {
 
   const fetchAnnouncements = async () => {
     try {
-      const response = await fetch('/api/announcements');
+      const response = await fetch('https://burol-1-web-backend.onrender.com/api/announcements');
       const data = await response.json();
       setAnnouncements(data);
     } catch (error) {
@@ -36,7 +37,7 @@ function App() {
 
   const fetchDropOffs = async () => {
     try {
-      const response = await fetch('/api/drop-offs');
+      const response = await fetch('https://burol-1-web-backend.onrender.com/api/drop-offs');
       const data = await response.json();
       setDropOffs(data);
     } catch (error) {
@@ -45,43 +46,35 @@ function App() {
   };
 
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <AppContent announcements={announcements} dropOffs={dropOffs} />
-    </Router>
-  );
-}
-
-function AppContent({ announcements, dropOffs }) {
-  return (
-    <div className="App">
-      <Navigation />
-      <main className="main-content">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/education" element={<EducationPage />} />
-          <Route path="/map" element={<MapPage dropOffs={dropOffs} />} />
-          <Route path="/updates" element={<UpdatesPage announcements={announcements} />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/incentives" element={<IncentivesPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-
-          {/* Hidden admin login — not linked anywhere in the UI */}
-          <Route path="/admin-login" element={<AdminLoginPage />} />
-
-          {/* Protected admin dashboard — redirects to home if not authenticated */}
-          <Route
-            path="/admin-panel"
-            element={
-              <ProtectedAdminRoute>
-                <AdminDashboard />
-              </ProtectedAdminRoute>
-            }
-          />
-        </Routes>
-      </main>
-      <Footer />
-    </div>
+    <LanguageProvider>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <div className="App">
+          <Navigation />
+          <main className="main-content">
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/education" element={<EducationPage />} />
+              <Route path="/map" element={<MapPage dropOffs={dropOffs} />} />
+              <Route path="/updates" element={<UpdatesPage announcements={announcements} />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/incentives" element={<IncentivesPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/admin-login" element={<AdminLoginPage />} />
+              <Route
+                path="/admin-panel"
+                element={
+                  <ProtectedAdminRoute>
+                    <AdminDashboard />
+                  </ProtectedAdminRoute>
+                }
+              />
+            </Routes>
+          </main>
+          <Footer />
+        </div>
+      </Router>
+    </LanguageProvider>
   );
 }
 
