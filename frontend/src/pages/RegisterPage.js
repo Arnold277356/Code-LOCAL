@@ -13,13 +13,11 @@ function RegisterPage() {
 
   const [dropOffLocations, setDropOffLocations] = useState([]);
   const [formData, setFormData] = useState({
-    first_name: isLoggedIn ? loggedInUser.first_name : '',
+    first_name: '',
     middle_name: '',
-    last_name: isLoggedIn ? loggedInUser.last_name : '',
+    last_name: '',
     suffix: '',
     dropoff_address: '',
-    age: '',
-    contact: '',
     e_waste_type: '',
     weight: '',
     consent: false,
@@ -33,7 +31,6 @@ function RegisterPage() {
 
   const [loading, setLoading] = useState(false);
 
-  // Fetch drop-off locations from backend
   useEffect(() => {
     const fetchLocations = async () => {
       try {
@@ -42,7 +39,6 @@ function RegisterPage() {
         if (data && data.length > 0) {
           setDropOffLocations(data);
         } else {
-          // Fallback defaults
           setDropOffLocations([
             { id: 1, name: 'Burol 1 Barangay Hall', address: 'Burol 1, Dasmariñas Cavite, Zone A' },
             { id: 2, name: 'Burol 1 Community Center', address: 'Burol 1, Dasmariñas Cavite, Zone B' },
@@ -50,7 +46,6 @@ function RegisterPage() {
           ]);
         }
       } catch (err) {
-        // Fallback on error
         setDropOffLocations([
           { id: 1, name: 'Burol 1 Barangay Hall', address: 'Burol 1, Dasmariñas Cavite, Zone A' },
           { id: 2, name: 'Burol 1 Community Center', address: 'Burol 1, Dasmariñas Cavite, Zone B' },
@@ -82,91 +77,86 @@ function RegisterPage() {
     e.preventDefault();
 
     if (!formData.consent) {
-      Swal.fire({ icon: 'warning', title: 'Consent Required', text: 'Please agree to the e-waste processing terms.' });
+      Swal.fire({ icon: 'warning', title: 'Consent Required', text: 'Please agree to the terms.' });
       return;
     }
 
-    const hasPartialEWaste = formData.dropoff_address || formData.weight || formData.e_waste_type;
-    const hasFullEWaste = formData.dropoff_address && formData.weight && formData.e_waste_type;
-
-    if (hasPartialEWaste && !hasFullEWaste) {
-      Swal.fire({ icon: 'warning', title: 'Incomplete E-Waste Info', text: 'If reporting e-waste, please select a drop-off location, weight, and type.' });
-      return;
-    }
-
-    if (isLoggedIn && !hasFullEWaste) {
-      Swal.fire({ icon: 'warning', title: 'Required Fields', text: 'Please fill in E-waste type, weight, and select a drop-off location.' });
-      return;
-    }
-
-    if (!isLoggedIn && (!formData.username || !formData.email || !formData.password || !formData.first_name || !formData.last_name || !formData.security_answer)) {
-      Swal.fire({ icon: 'warning', title: 'Missing Info', text: 'Please complete all required account fields.' });
-      return;
-    }
-
-    if (!isLoggedIn && formData.password !== formData.confirm_password) {
-      Swal.fire({ icon: 'warning', title: 'Password Mismatch', text: 'Passwords do not match.' });
-      return;
-    }
-
-    setLoading(true);
-
-    let payload;
+    // ── LOGGED IN: E-waste submission only ──
     if (isLoggedIn) {
-      payload = {
-        userId: loggedInUser?.id,
-        dropoff_address: formData.dropoff_address,
-        e_waste_type: formData.e_waste_type,
-        weight: parseFloat(formData.weight),
-        consent: formData.consent,
-      };
-    } else {
-      payload = {
-        first_name: formData.first_name,
-        middle_name: formData.middle_name,
-        last_name: formData.last_name,
-        suffix: formData.suffix,
-        age: formData.age ? parseInt(formData.age) : null,
-        contact: formData.contact,
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-        confirm_password: formData.confirm_password,
-        security_question: formData.security_question,
-        security_answer: formData.security_answer,
-        consent: formData.consent,
-        ...(hasFullEWaste && {
-          dropoff_address: formData.dropoff_address,
-          e_waste_type: formData.e_waste_type,
-          weight: parseFloat(formData.weight),
-        }),
-      };
-    }
-
-    try {
-      const endpoint = isLoggedIn ? '/api/e-waste-only' : '/api/registrations';
-      const response = await fetch(`${BACKEND}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        Swal.fire({
-          icon: 'success',
-          title: 'Success!',
-          text: isLoggedIn ? 'E-waste reported successfully!' : 'Account created successfully.'
-        }).then(() => {
-          window.location.href = isLoggedIn ? '/dashboard' : '/login';
-        });
-      } else {
-        const error = await response.json();
-        Swal.fire({ icon: 'error', title: 'Failed', text: error.error || 'Something went wrong.' });
+      if (!formData.dropoff_address || !formData.weight || !formData.e_waste_type) {
+        Swal.fire({ icon: 'warning', title: 'Required Fields', text: 'Please fill in all e-waste fields.' });
+        return;
       }
-    } catch (err) {
-      Swal.fire({ icon: 'error', title: 'Error', text: 'Server error. Please try again.' });
-    } finally {
-      setLoading(false);
+
+      setLoading(true);
+      try {
+        const res = await fetch(`${BACKEND}/api/e-waste-only`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: loggedInUser.id,
+            dropoff_address: formData.dropoff_address,
+            e_waste_type: formData.e_waste_type,
+            weight: parseFloat(formData.weight),
+            consent: formData.consent,
+          })
+        });
+
+        if (res.ok) {
+          Swal.fire({ icon: 'success', title: 'Success!', text: 'E-waste reported successfully!' })
+            .then(() => { window.location.href = '/dashboard'; });
+        } else {
+          const error = await res.json();
+          Swal.fire({ icon: 'error', title: 'Failed', text: error.error || 'Something went wrong.' });
+        }
+      } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'Server error. Please try again.' });
+      } finally {
+        setLoading(false);
+      }
+
+    // ── NOT LOGGED IN: Account creation only ──
+    } else {
+      if (!formData.username || !formData.email || !formData.password || !formData.first_name || !formData.last_name || !formData.security_answer) {
+        Swal.fire({ icon: 'warning', title: 'Missing Info', text: 'Please complete all required fields.' });
+        return;
+      }
+      if (formData.password !== formData.confirm_password) {
+        Swal.fire({ icon: 'warning', title: 'Password Mismatch', text: 'Passwords do not match.' });
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const res = await fetch(`${BACKEND}/api/auth/register-only`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            first_name: formData.first_name,
+            middle_name: formData.middle_name,
+            last_name: formData.last_name,
+            suffix: formData.suffix,
+            username: formData.username,
+            email: formData.email,
+            password: formData.password,
+            confirm_password: formData.confirm_password,
+            security_question: formData.security_question,
+            security_answer: formData.security_answer,
+          })
+        });
+
+        if (res.ok) {
+          Swal.fire({ icon: 'success', title: 'Account Created!', text: 'You can now log in and report your e-waste.' })
+            .then(() => { window.location.href = '/login'; });
+        } else {
+          const error = await res.json();
+          Swal.fire({ icon: 'error', title: 'Failed', text: error.error || 'Something went wrong.' });
+        }
+      } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'Server error. Please try again.' });
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -181,51 +171,52 @@ function RegisterPage() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <form onSubmit={handleSubmit} className="space-y-6 bg-white p-8 rounded-xl shadow-lg border border-gray-100">
 
-          {/* E-Waste Section */}
-          <div className="bg-blue-50 p-6 rounded-lg border-2 border-blue-200">
-            <h2 className="text-lg font-bold text-blue-900 mb-1 flex items-center gap-2">
-              <FaRecycle className="text-blue-600" /> 1. {t.register.ewasteSection}
-              {!isLoggedIn && <span className="text-sm font-normal text-blue-500 ml-2">{t.register.optional}</span>}
-            </h2>
-            {!isLoggedIn && <p className="text-sm text-blue-600 mb-4">{t.register.optionalNote}</p>}
+          {/* ── LOGGED IN: Show only E-Waste tab ── */}
+          {isLoggedIn && (
+            <div className="bg-blue-50 p-6 rounded-lg border-2 border-blue-200">
+              <h2 className="text-lg font-bold text-blue-900 mb-4 flex items-center gap-2">
+                <FaRecycle className="text-blue-600" /> {t.register.ewasteSection}
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <select
+                  name="dropoff_address"
+                  value={formData.dropoff_address}
+                  onChange={handleChange}
+                  className="p-2.5 border rounded-lg bg-white md:col-span-2"
+                  required
+                >
+                  <option value="">{t.register.selectDropoff} *</option>
+                  {dropOffLocations.map(loc => (
+                    <option key={loc.id} value={loc.name}>
+                      {loc.name} — {loc.address}
+                    </option>
+                  ))}
+                </select>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Drop-off location SELECTOR */}
-              <select
-                name="dropoff_address"
-                value={formData.dropoff_address}
-                onChange={handleChange}
-                className="p-2.5 border rounded-lg bg-white md:col-span-2"
-              >
-                <option value="">{t.register.selectDropoff}{isLoggedIn ? ' *' : ''}</option>
-                {dropOffLocations.map(loc => (
-                  <option key={loc.id} value={loc.name}>
-                    {loc.name} — {loc.address}
-                  </option>
-                ))}
-              </select>
+                <input
+                  type="number" name="weight" value={formData.weight} onChange={handleChange}
+                  placeholder={`${t.register.weight} *`}
+                  className="p-2.5 border rounded-lg bg-white"
+                  required
+                />
 
-              <input
-                type="number" name="weight" value={formData.weight} onChange={handleChange}
-                placeholder={`${t.register.weight}${isLoggedIn ? ' *' : ''}`}
-                className="p-2.5 border rounded-lg bg-white"
-              />
-
-              <select
-                name="e_waste_type" value={formData.e_waste_type} onChange={handleChange}
-                className="p-2.5 border rounded-lg bg-white"
-              >
-                <option value="">{t.register.selectEwaste}{isLoggedIn ? ' *' : ''}</option>
-                {eWasteTypes.map(type => <option key={type} value={type}>{type}</option>)}
-              </select>
+                <select
+                  name="e_waste_type" value={formData.e_waste_type} onChange={handleChange}
+                  className="p-2.5 border rounded-lg bg-white"
+                  required
+                >
+                  <option value="">{t.register.selectEwaste} *</option>
+                  {eWasteTypes.map(type => <option key={type} value={type}>{type}</option>)}
+                </select>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Account Section */}
+          {/* ── NOT LOGGED IN: Show only Account tab ── */}
           {!isLoggedIn && (
             <div className="bg-purple-50 p-6 rounded-lg border-2 border-purple-200">
               <h2 className="text-lg font-bold text-purple-900 mb-4 flex items-center gap-2">
-                <FaUser className="text-purple-600" /> 2. {t.register.accountSection}
+                <FaUser className="text-purple-600" /> {t.register.accountSection}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input type="text" name="first_name" value={formData.first_name} onChange={handleChange} placeholder={t.register.firstName} className="p-2.5 border rounded-lg bg-white" required />
