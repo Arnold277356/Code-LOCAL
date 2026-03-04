@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import { FaUser, FaRecycle } from 'react-icons/fa';
 import { useLanguage } from '../context/LanguageContext';
 import './RegisterPage.css';
+
+const BACKEND = 'https://burol-1-web-backend.onrender.com';
 
 function RegisterPage() {
   const loggedInUser = JSON.parse(localStorage.getItem('user'));
   const isLoggedIn = !!loggedInUser;
   const { t } = useLanguage();
 
+  const [dropOffLocations, setDropOffLocations] = useState([]);
   const [formData, setFormData] = useState({
     first_name: isLoggedIn ? loggedInUser.first_name : '',
     middle_name: '',
@@ -29,6 +32,34 @@ function RegisterPage() {
   });
 
   const [loading, setLoading] = useState(false);
+
+  // Fetch drop-off locations from backend
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const res = await fetch(`${BACKEND}/api/drop-offs`);
+        const data = await res.json();
+        if (data && data.length > 0) {
+          setDropOffLocations(data);
+        } else {
+          // Fallback defaults
+          setDropOffLocations([
+            { id: 1, name: 'Burol 1 Barangay Hall', address: 'Burol 1, Dasmariñas Cavite, Zone A' },
+            { id: 2, name: 'Burol 1 Community Center', address: 'Burol 1, Dasmariñas Cavite, Zone B' },
+            { id: 3, name: 'Burol 1 Market Area', address: 'Burol 1, Dasmariñas Cavite, Zone C' },
+          ]);
+        }
+      } catch (err) {
+        // Fallback on error
+        setDropOffLocations([
+          { id: 1, name: 'Burol 1 Barangay Hall', address: 'Burol 1, Dasmariñas Cavite, Zone A' },
+          { id: 2, name: 'Burol 1 Community Center', address: 'Burol 1, Dasmariñas Cavite, Zone B' },
+          { id: 3, name: 'Burol 1 Market Area', address: 'Burol 1, Dasmariñas Cavite, Zone C' },
+        ]);
+      }
+    };
+    fetchLocations();
+  }, []);
 
   const eWasteTypes = [
     'Desktop Computer', 'Laptop', 'Smartphone', 'Tablet', 'Monitor',
@@ -59,24 +90,23 @@ function RegisterPage() {
     const hasFullEWaste = formData.dropoff_address && formData.weight && formData.e_waste_type;
 
     if (hasPartialEWaste && !hasFullEWaste) {
-      Swal.fire({ icon: 'warning', title: 'Incomplete E-Waste Info', text: 'If reporting e-waste, please fill in address, weight, and type.' });
+      Swal.fire({ icon: 'warning', title: 'Incomplete E-Waste Info', text: 'If reporting e-waste, please select a drop-off location, weight, and type.' });
       return;
     }
 
-    if (isLoggedIn) {
-      if (!hasFullEWaste) {
-        Swal.fire({ icon: 'warning', title: 'Required Fields', text: 'Please fill in E-waste type, weight, and drop-off address.' });
-        return;
-      }
-    } else {
-      if (!formData.username || !formData.email || !formData.password || !formData.first_name || !formData.last_name || !formData.security_answer) {
-        Swal.fire({ icon: 'warning', title: 'Missing Info', text: 'Please complete all required account fields.' });
-        return;
-      }
-      if (formData.password !== formData.confirm_password) {
-        Swal.fire({ icon: 'warning', title: 'Password Mismatch', text: 'Passwords do not match.' });
-        return;
-      }
+    if (isLoggedIn && !hasFullEWaste) {
+      Swal.fire({ icon: 'warning', title: 'Required Fields', text: 'Please fill in E-waste type, weight, and select a drop-off location.' });
+      return;
+    }
+
+    if (!isLoggedIn && (!formData.username || !formData.email || !formData.password || !formData.first_name || !formData.last_name || !formData.security_answer)) {
+      Swal.fire({ icon: 'warning', title: 'Missing Info', text: 'Please complete all required account fields.' });
+      return;
+    }
+
+    if (!isLoggedIn && formData.password !== formData.confirm_password) {
+      Swal.fire({ icon: 'warning', title: 'Password Mismatch', text: 'Passwords do not match.' });
+      return;
     }
 
     setLoading(true);
@@ -115,7 +145,7 @@ function RegisterPage() {
 
     try {
       const endpoint = isLoggedIn ? '/api/e-waste-only' : '/api/registrations';
-      const response = await fetch(`https://burol-1-web-backend.onrender.com${endpoint}`, {
+      const response = await fetch(`${BACKEND}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -151,27 +181,47 @@ function RegisterPage() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <form onSubmit={handleSubmit} className="space-y-6 bg-white p-8 rounded-xl shadow-lg border border-gray-100">
 
+          {/* E-Waste Section */}
           <div className="bg-blue-50 p-6 rounded-lg border-2 border-blue-200">
             <h2 className="text-lg font-bold text-blue-900 mb-1 flex items-center gap-2">
               <FaRecycle className="text-blue-600" /> 1. {t.register.ewasteSection}
               {!isLoggedIn && <span className="text-sm font-normal text-blue-500 ml-2">{t.register.optional}</span>}
             </h2>
             {!isLoggedIn && <p className="text-sm text-blue-600 mb-4">{t.register.optionalNote}</p>}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input type="text" name="dropoff_address" value={formData.dropoff_address} onChange={handleChange}
-                placeholder={`${t.register.dropoffAddress}${isLoggedIn ? ' *' : ''}`}
-                className="p-2.5 border rounded-lg bg-white" />
-              <input type="number" name="weight" value={formData.weight} onChange={handleChange}
+              {/* Drop-off location SELECTOR */}
+              <select
+                name="dropoff_address"
+                value={formData.dropoff_address}
+                onChange={handleChange}
+                className="p-2.5 border rounded-lg bg-white md:col-span-2"
+              >
+                <option value="">{t.register.selectDropoff}{isLoggedIn ? ' *' : ''}</option>
+                {dropOffLocations.map(loc => (
+                  <option key={loc.id} value={loc.name}>
+                    {loc.name} — {loc.address}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                type="number" name="weight" value={formData.weight} onChange={handleChange}
                 placeholder={`${t.register.weight}${isLoggedIn ? ' *' : ''}`}
-                className="p-2.5 border rounded-lg bg-white" />
-              <select name="e_waste_type" value={formData.e_waste_type} onChange={handleChange}
-                className="p-2.5 border rounded-lg bg-white md:col-span-2">
+                className="p-2.5 border rounded-lg bg-white"
+              />
+
+              <select
+                name="e_waste_type" value={formData.e_waste_type} onChange={handleChange}
+                className="p-2.5 border rounded-lg bg-white"
+              >
                 <option value="">{t.register.selectEwaste}{isLoggedIn ? ' *' : ''}</option>
-                {eWasteTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                {eWasteTypes.map(type => <option key={type} value={type}>{type}</option>)}
               </select>
             </div>
           </div>
 
+          {/* Account Section */}
           {!isLoggedIn && (
             <div className="bg-purple-50 p-6 rounded-lg border-2 border-purple-200">
               <h2 className="text-lg font-bold text-purple-900 mb-4 flex items-center gap-2">
