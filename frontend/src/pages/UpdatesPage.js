@@ -1,40 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import './UpdatesPage.css';
 
-function UpdatesPage({ announcements }) {
+const BACKEND = 'https://burol-1-web-backend.onrender.com';
+
+function UpdatesPage() {
   const [filter, setFilter] = useState('all');
+  const [announcements, setAnnouncements] = useState([]);
+  const [loading, setLoading] = useState(true);
   const { t } = useLanguage();
 
-  const defaultAnnouncements = [
-    {
-      id: 1,
-      title: 'Extended Collection Hours This Weekend',
-      content: 'All drop-off centers will be open from 8:00 AM to 7:00 PM this Saturday and Sunday to accommodate more residents.',
-      type: 'collection',
-      created_at: new Date().toISOString()
-    },
-    {
-      id: 2,
-      title: 'Temporary Closure Notice',
-      content: 'The Community Center drop-off point will be temporarily closed on December 25-26 for maintenance.',
-      type: 'notice',
-      created_at: new Date(Date.now() - 86400000).toISOString()
-    },
-    {
-      id: 3,
-      title: 'New E-waste Categories Accepted',
-      content: 'We now accept solar panels and LED lights! Please bring them to any of our drop-off centers.',
-      type: 'announcement',
-      created_at: new Date(Date.now() - 172800000).toISOString()
-    }
-  ];
+  useEffect(() => {
+    const fetchAnnouncements = async () => {
+      try {
+        const res = await fetch(`${BACKEND}/api/announcements`);
+        const data = await res.json();
+        if (data && data.length > 0) {
+          setAnnouncements(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch announcements:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAnnouncements();
+  }, []);
 
-  const displayAnnouncements = announcements && announcements.length > 0 ? announcements : defaultAnnouncements;
-  const filteredAnnouncements = filter === 'all' ? displayAnnouncements : displayAnnouncements.filter(a => a.type === filter);
+  const filteredAnnouncements = filter === 'all'
+    ? announcements
+    : announcements.filter(a => a.type === filter);
 
   const getTypeColor = (type) => {
-    switch(type) {
+    switch (type) {
       case 'collection': return 'type-collection';
       case 'notice': return 'type-notice';
       case 'announcement': return 'type-announcement';
@@ -43,7 +41,7 @@ function UpdatesPage({ announcements }) {
   };
 
   const getTypeLabel = (type) => {
-    switch(type) {
+    switch (type) {
       case 'collection': return '📅 Collection';
       case 'notice': return '⚠️ Notice';
       case 'announcement': return '📢 Announcement';
@@ -76,7 +74,11 @@ function UpdatesPage({ announcements }) {
           </div>
 
           <div className="announcements-container">
-            {filteredAnnouncements.length > 0 ? (
+            {loading ? (
+              <div className="no-announcements">
+                <p>Loading announcements...</p>
+              </div>
+            ) : filteredAnnouncements.length > 0 ? (
               filteredAnnouncements.map((announcement) => (
                 <div key={announcement.id} className={`announcement-card ${getTypeColor(announcement.type)}`}>
                   <div className="announcement-header">
