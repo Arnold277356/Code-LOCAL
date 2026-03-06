@@ -115,6 +115,30 @@
   border: none;
 }
 
+/* Language toggle outside of menu - always visible on mobile */
+.nav-actions {
+  display: none;
+  align-items: center;
+  gap: 12px;
+}
+
+.language-toggle {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 6px;
+  padding: 6px 12px;
+  color: white;
+  font-weight: bold;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.language-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: white;
+}
+
 @media (max-width: 768px) {
   .navbar {
     padding: 0;
@@ -161,6 +185,16 @@
 
   .nav-menu.active {
     max-height: 500px;
+  }
+
+  /* Hide language toggle inside menu on mobile */
+  .nav-menu .language-toggle {
+    display: none;
+  }
+
+  /* Show language toggle outside menu on mobile */
+  .nav-actions {
+    display: flex;
   }
 
   .nav-link {

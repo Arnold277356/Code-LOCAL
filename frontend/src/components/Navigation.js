@@ -62,8 +62,18 @@ function Navigation() {
           </button>
         </div>
 
-        <div className="hamburger" onClick={toggleMenu}>
-          {isOpen ? <FaTimes /> : <FaBars />}
+        <div className="nav-actions">
+          <button
+            onClick={toggleLanguage}
+            className="language-toggle"
+            title={language === 'en' ? 'Switch to Filipino' : 'Switch to English'}
+          >
+            {language === 'en' ? '🇵🇭 FIL' : '🇺🇸 EN'}
+          </button>
+
+          <div className="hamburger" onClick={toggleMenu}>
+            {isOpen ? <FaTimes /> : <FaBars />}
+          </div>
         </div>
       </div>
     </nav>
