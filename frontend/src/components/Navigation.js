@@ -11,9 +11,15 @@ function Navigation() {
   const { language, toggleLanguage, t } = useLanguage();
 
   useEffect(() => {
-    const loggedInUser = localStorage.getItem('user');
-    setUser(loggedInUser ? JSON.parse(loggedInUser) : null);
-  }, [location]);
+    try {
+      const loggedInUser = localStorage.getItem('user');
+      setUser(loggedInUser ? JSON.parse(loggedInUser) : null);
+    } catch (error) {
+      console.error('Error parsing user from localStorage:', error);
+      localStorage.removeItem('user');
+      setUser(null);
+    }
+  }, []);
 
   const toggleMenu = () => setIsOpen(!isOpen);
   const closeMenu = () => setIsOpen(false);

@@ -4,6 +4,139 @@
   const cloudinary = require('cloudinary').v2;
   const bcrypt = require('bcrypt');
   require('dotenv').config();
+  const { Resend } = require('resend');
+  
+  const axios = require('axios');
+  const resend = new Resend(process.env.RESEND_API_KEY);
+ 
+  // ── Email helper ───────────────────────────────────────────
+async function sendStatusEmail(toEmail, userName, ewasteType, weight, newStatus, reward) {
+  const statusConfig = {
+    'In Progress': {
+      emoji: '🔄',
+      color: '#3b82f6',
+      subject: 'Your E-Waste Drop-off is Being Processed — E-Cycle Hub',
+      headline: 'Your submission is in progress!',
+      message: 'The barangay staff has received your e-waste and is currently processing it. We will notify you once it is verified.',
+      badge: 'IN PROGRESS', badgeBg: '#dbeafe', badgeColor: '#1e40af',
+    },
+    'Done': {
+      emoji: '✅',
+      color: '#10b981',
+      subject: '✅ E-Waste Verified — Your Reward is Ready to Claim!',
+      headline: 'Your e-waste has been verified!',
+      message: `Great news! Your drop-off has been verified. You have earned <strong>₱${parseFloat(reward || 0).toFixed(2)}</strong>. Log in to your dashboard to download your certificate and claim your reward at the Barangay Hall.`,
+      badge: 'DONE', badgeBg: '#d1fae5', badgeColor: '#065f46',
+    },
+    'Rejected': {
+      emoji: '❌',
+      color: '#ef4444',
+      subject: 'Update on Your E-Waste Drop-off — E-Cycle Hub',
+      headline: 'Your submission was not accepted.',
+      message: 'Unfortunately, your e-waste submission could not be verified. This may be due to incorrect weight or item type. Please visit the Barangay Hall for details or to re-submit.',
+      badge: 'REJECTED', badgeBg: '#fee2e2', badgeColor: '#991b1b',
+    },
+  };
+
+  const config = statusConfig[newStatus];
+  if (!config || !toEmail) return;
+
+  const html = `
+    <!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,sans-serif;">
+      <div style="max-width:600px;margin:0 auto;padding:20px;">
+        <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:12px 12px 0 0;padding:30px;text-align:center;">
+          <div style="font-size:40px;margin-bottom:8px;">♻️</div>
+          <h1 style="color:white;margin:0;font-size:24px;">E-Cycle Hub</h1>
+          <p style="color:#d1fae5;margin:4px 0 0;font-size:13px;">Barangay Burol 1, Dasmariñas City, Cavite</p>
+        </div>
+        <div style="background:white;padding:32px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">
+          <p style="color:#374151;font-size:16px;margin:0 0 8px;">Hi <strong>${userName}</strong>,</p>
+          <div style="margin:20px 0;text-align:center;">
+            <span style="background:${config.badgeBg};color:${config.badgeColor};padding:6px 20px;border-radius:999px;font-weight:bold;font-size:13px;letter-spacing:1px;">${config.emoji} ${config.badge}</span>
+          </div>
+          <h2 style="color:${config.color};font-size:20px;margin:0 0 12px;">${config.headline}</h2>
+          <p style="color:#6b7280;line-height:1.7;margin:0 0 24px;">${config.message}</p>
+          <div style="background:#f9fafb;border-radius:10px;padding:20px;margin-bottom:24px;">
+            <h3 style="color:#374151;font-size:14px;margin:0 0 12px;text-transform:uppercase;letter-spacing:0.5px;">Submission Details</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+              <tr><td style="padding:6px 0;color:#6b7280;">E-Waste Type</td><td style="padding:6px 0;color:#111;font-weight:bold;text-align:right;">${ewasteType}</td></tr>
+              <tr style="border-top:1px solid #e5e7eb;"><td style="padding:6px 0;color:#6b7280;">Weight</td><td style="padding:6px 0;color:#111;font-weight:bold;text-align:right;">${weight} kg</td></tr>
+              <tr style="border-top:1px solid #e5e7eb;"><td style="padding:6px 0;color:#6b7280;">Status</td><td style="padding:6px 0;text-align:right;"><span style="background:${config.badgeBg};color:${config.badgeColor};padding:2px 10px;border-radius:999px;font-size:12px;font-weight:bold;">${newStatus}</span></td></tr>
+              ${newStatus === 'Done' ? `<tr style="border-top:1px solid #e5e7eb;"><td style="padding:6px 0;color:#6b7280;">Reward Earned</td><td style="padding:6px 0;color:#10b981;font-weight:bold;text-align:right;font-size:16px;">₱${parseFloat(reward || 0).toFixed(2)}</td></tr>` : ''}
+            </table>
+          </div>
+          ${newStatus === 'Done' ? `
+          <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:20px;margin-bottom:24px;">
+            <h3 style="color:#065f46;font-size:14px;margin:0 0 10px;">💰 How to Claim Your Reward</h3>
+            <ol style="color:#374151;font-size:13px;line-height:2;padding-left:20px;margin:0;">
+              <li>Visit Barangay Hall at Burol 1, Dasmariñas Cavite</li>
+              <li>Bring a valid government-issued ID</li>
+              <li>Download your certificate from your dashboard</li>
+              <li>Barangay staff will verify and release your voucher</li>
+            </ol>
+          </div>` : ''}
+          <div style="text-align:center;margin:24px 0;">
+            <a href="https://burol1ewastegroup6.vercel.app/dashboard" style="background:linear-gradient(135deg,#10b981,#059669);color:white;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:bold;font-size:15px;display:inline-block;">View My Dashboard →</a>
+          </div>
+        </div>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:0 0 12px 12px;padding:20px;text-align:center;">
+          <p style="color:#9ca3af;font-size:12px;margin:0 0 6px;">📍 Burol 1, Dasmariñas City, Cavite &nbsp;|&nbsp; 📞 09916338752</p>
+          <p style="color:#d1d5db;font-size:11px;margin:8px 0 0;">© 2024 E-Cycle Hub — Barangay Burol 1</p>
+        </div>
+      </div>
+    </body></html>
+  `;
+
+  try {
+    await resend.emails.send({
+      from: 'E-Cycle Hub <onboarding@resend.dev>',
+      to: toEmail,
+      subject: config.subject,
+      html,
+    });
+    console.log(`✅ Email sent to ${toEmail} — Status: ${newStatus}`);
+  } catch (err) {
+    console.error('❌ Email failed:', err.message);
+  }
+}
+  const SEMAPHORE_API_KEY = process.env.SEMAPHORE_API_KEY;
+  const SEMAPHORE_SENDER = 'ECycleHub'; // max 11 chars, no spaces
+
+  // ── SMS helper ─────────────────────────────────────────────
+async function sendSMS(phoneNumber, message) {
+  if (!phoneNumber || !SEMAPHORE_API_KEY) return;
+
+  // Normalize PH number: 09xxxxxxxxx → 639xxxxxxxxx
+  let normalized = phoneNumber.replace(/\s+/g, '').replace(/^0/, '63');
+
+  try {
+    await axios.post('https://api.semaphore.co/api/v4/messages', {
+      apikey: SEMAPHORE_API_KEY,
+      number: normalized,
+      message: message,
+      sendername: SEMAPHORE_SENDER,
+    });
+    console.log(`✅ SMS sent to ${normalized}`);
+  } catch (err) {
+    console.error('❌ SMS failed:', err.response?.data || err.message);
+    // Don't throw — SMS failure should NOT break status update
+  }
+}
+
+function buildSMSMessage(userName, ewasteType, weight, newStatus, reward) {
+  const firstName = userName.split(' ')[0];
+  switch (newStatus) {
+    case 'In Progress':
+      return `Hi ${firstName}! Your e-waste drop-off (${ewasteType}, ${weight}kg) is now being processed by Barangay Burol 1 staff. We will notify you once verified. - E-Cycle Hub`;
+    case 'Done':
+      return `Hi ${firstName}! Your e-waste drop-off (${ewasteType}, ${weight}kg) has been VERIFIED! You earned P${parseFloat(reward || 0).toFixed(2)}. Visit Barangay Hall with valid ID to claim. - E-Cycle Hub`;
+    case 'Rejected':
+      return `Hi ${firstName}, your e-waste submission (${ewasteType}, ${weight}kg) could not be verified. Please visit Barangay Hall at Burol 1 for details. - E-Cycle Hub`;
+    default:
+      return null;
+  }
+}
 
   // Helper to clean inputs
   const normalizeUserInput = (username, email) => ({
@@ -97,11 +230,19 @@
         );
         
       `);
-      await pool.query(`
+await pool.query(`
       ALTER TABLE registrations
       ADD COLUMN IF NOT EXISTS middle_name VARCHAR(255),
       ADD COLUMN IF NOT EXISTS suffix VARCHAR(50),
-      ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Pending';
+      ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Pending',
+      ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS archive_reason TEXT;
+    `);
+
+    // Add phone_number column to users table (for SMS)
+    await pool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_number VARCHAR(20);
     `);
     console.log('✓ Database columns synchronized');
   } catch (error) {
@@ -218,69 +359,136 @@ app.post('/api/admin/login', async (req, res) => {
 });
 
   // GET ALL REGISTRATIONS (Admin View)
-  app.get('/api/admin/registrations', async (req, res) => {
+  app.patch('/api/admin/registrations/:id/status', async (req, res) => {
+  const token = req.headers['x-admin-token'];
+  if (token !== process.env.ADMIN_SECRET_TOKEN) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+
+  const { id } = req.params;
+  const { status } = req.body;
+  const validStatuses = ['Pending', 'In Progress', 'Done', 'Rejected'];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
+
   try {
-    const providedToken = req.headers['x-admin-token'];
-    const adminToken = process.env.ADMIN_SECRET_TOKEN;
+    await pool.query('UPDATE registrations SET status = $1 WHERE id = $2', [status, id]);
 
-    if (!providedToken || providedToken !== adminToken) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
+    // Fetch registration + user info for notifications
     const result = await pool.query(`
-      SELECT 
-        r.id,
-        r.e_waste_type,
-        r.weight,
-        r.reward_points,
-        r.created_at,
-        r.status,
-        r.contact,
-        u.first_name,
-        u.last_name
+      SELECT r.id, r.e_waste_type, r.weight, r.reward_points, r.status,
+             u.email, u.phone_number, u.first_name, u.last_name, u.username
       FROM registrations r
       LEFT JOIN users u ON r.user_id = u.id
+      WHERE r.id = $1
+    `, [id]);
+
+    if (result.rows.length > 0) {
+      const reg = result.rows[0];
+      const userName = reg.first_name ? `${reg.first_name} ${reg.last_name}` : reg.username;
+
+      // Send both in parallel — neither failure blocks the other
+      await Promise.allSettled([
+        reg.email
+          ? sendStatusEmail(reg.email, userName, reg.e_waste_type, reg.weight, status, reg.reward_points)
+          : Promise.resolve(),
+        reg.phone_number
+          ? sendSMS(reg.phone_number, buildSMSMessage(userName, reg.e_waste_type, reg.weight, status, reg.reward_points))
+          : Promise.resolve(),
+      ]);
+    }
+
+    res.json({ success: true, message: `Status updated to ${status}` });
+  } catch (err) {
+    console.error('Status update error:', err);
+    res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+// ── DELETE (ARCHIVE) — soft delete instead of hard delete ──
+app.delete('/api/admin/registrations/:id', async (req, res) => {
+  const token = req.headers['x-admin-token'];
+  if (token !== process.env.ADMIN_SECRET_TOKEN) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+
+  const { id } = req.params;
+  const { reason } = req.body; // optional reason from admin
+
+  try {
+    await pool.query(
+   'UPDATE registrations SET is_archived = TRUE, archived_at = NOW(), archive_reason = $1 WHERE id = $2',
+      [reason || 'Archived by admin', id]
+    );
+    res.json({ success: true, message: 'Record archived successfully.' });
+  } catch (err) {
+    console.error('Archive error:', err);
+    res.status(500).json({ error: 'Failed to archive record.' });
+  }
+});
+
+// ── GET all active registrations (exclude archived) ────────
+app.get('/api/admin/registrations', async (req, res) => {
+  const token = req.headers['x-admin-token'];
+  if (token !== process.env.ADMIN_SECRET_TOKEN) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+
+try {
+    const result = await pool.query(`
+      SELECT r.*, u.username, u.email, u.first_name, u.last_name, u.contact, u.phone_number
+      FROM registrations r
+      LEFT JOIN users u ON r.user_id = u.id
+      WHERE r.is_archived IS NOT TRUE
       ORDER BY r.created_at DESC
     `);
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server Error' });
+    console.error('Fetch registrations error:', err);
+    res.status(500).json({ error: 'Failed to fetch registrations.' });
   }
 });
 
+// ── GET archived registrations ─────────────────────────────
+app.get('/api/admin/registrations/archived', async (req, res) => {
+  const token = req.headers['x-admin-token'];
+  if (token !== process.env.ADMIN_SECRET_TOKEN) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
 
-// STEP 3: Add this new PATCH route to update donation status
-app.patch('/api/admin/registrations/:id/status', async (req, res) => {
   try {
-    const providedToken = req.headers['x-admin-token'];
-    const adminToken = process.env.ADMIN_SECRET_TOKEN;
-
-    if (!providedToken || providedToken !== adminToken) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const { id } = req.params;
-    const { status } = req.body;
-
-    const validStatuses = ['Pending', 'In Progress', 'Done', 'Rejected'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
-    }
-
-    const result = await pool.query(
-      'UPDATE registrations SET status = $1 WHERE id = $2 RETURNING *',
-      [status, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Registration not found' });
-    }
-
-    res.json({ success: true, registration: result.rows[0] });
+    const result = await pool.query(`
+      SELECT r.*, u.username, u.email, u.first_name, u.last_name
+      FROM registrations r
+      LEFT JOIN users u ON r.user_id = u.id
+      WHERE r.is_archived = TRUE
+      ORDER BY r.archived_at DESC
+    `);
+    res.json(result.rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server Error' });
+    console.error('Fetch archived error:', err);
+    res.status(500).json({ error: 'Failed to fetch archived records.' });
+  }
+});
+
+// ── RESTORE from archive ───────────────────────────────────
+app.patch('/api/admin/registrations/:id/restore', async (req, res) => {
+  const token = req.headers['x-admin-token'];
+  if (token !== process.env.ADMIN_SECRET_TOKEN) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+
+  const { id } = req.params;
+  try {
+    await pool.query(
+      'UPDATE registrations SET is_archived = FALSE, archived_at = NULL, archive_reason = NULL WHERE id = $1',
+      [id]
+    );
+    res.json({ success: true, message: 'Record restored successfully.' });
+  } catch (err) {
+    console.error('Restore error:', err);
+    res.status(500).json({ error: 'Failed to restore record.' });
   }
 });
 
@@ -392,14 +600,14 @@ app.patch('/api/admin/registrations/:id/status', async (req, res) => {
       // DEBUG: This will show up in your Render Logs!
       console.log(`User ${userId} has ${regRes.rows.length} records. Total Weight: ${totalWeight}`);
 
-      // 4. Send the package to the Dashboard
+// 4. Send the package to the Dashboard
       res.json({ 
         success: true, 
         user: { 
           ...userRes.rows[0], 
           total_registrations: regRes.rows.length, 
-          totalWeight: totalWeight,      // Renamed to match frontend
-          totalRewards: totalRewards,    // Renamed to match frontend
+          totalWeight: totalWeight,
+          totalRewards: totalRewards,
           registrations: regRes.rows 
         } 
       });
@@ -409,39 +617,8 @@ app.patch('/api/admin/registrations/:id/status', async (req, res) => {
       res.status(500).json({ error: 'Fetch failed' }); 
     }
   });
-app.delete('/api/admin/registrations/:id', async (req, res) => {
-  try {
-    const providedToken = req.headers['x-admin-token'];
-    if (!providedToken || providedToken !== process.env.ADMIN_SECRET_TOKEN) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
 
-    const { id } = req.params;
-    await pool.query('DELETE FROM registrations WHERE id = $1', [id]);
-    res.json({ success: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to delete' });
-  }
-});
-
-app.delete('/api/admin/registrations/:id', async (req, res) => {
-  try {
-    const providedToken = req.headers['x-admin-token'];
-    if (!providedToken || providedToken !== process.env.ADMIN_SECRET_TOKEN) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const { id } = req.params;
-    await pool.query('DELETE FROM registrations WHERE id = $1', [id]);
-    res.json({ success: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to delete' });
-  }
-});
-
-app.post('/api/admin/announcements', async (req, res) => {
+  app.post('/api/admin/announcements', async (req, res) => {
   try {
     const providedToken = req.headers['x-admin-token'];
     if (!providedToken || providedToken !== process.env.ADMIN_SECRET_TOKEN) {
@@ -462,6 +639,39 @@ app.post('/api/admin/announcements', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to post announcement' });
+  }
+});
+
+// GET all users (Admin)
+app.get('/api/admin/users', async (req, res) => {
+  const token = req.headers['x-admin-token'];
+  if (token !== process.env.ADMIN_SECRET_TOKEN) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const result = await pool.query('SELECT id, username, email, first_name, last_name, contact, phone_number, created_at FROM users ORDER BY created_at DESC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Fetch users error:', err);
+    res.status(500).json({ error: 'Failed to fetch users.' });
+  }
+});
+
+// DELETE user (Admin)
+app.delete('/api/admin/users/:id', async (req, res) => {
+  const token = req.headers['x-admin-token'];
+  if (token !== process.env.ADMIN_SECRET_TOKEN) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM users WHERE id = $1', [id]);
+    res.json({ success: true, message: 'User deleted successfully.' });
+  } catch (err) {
+    console.error('Delete user error:', err);
+    res.status(500).json({ error: 'Failed to delete user.' });
   }
 });
 

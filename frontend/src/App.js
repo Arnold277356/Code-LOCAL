@@ -13,6 +13,8 @@ import IncentivesPage from './pages/IncentivesPage';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import FAQPage from './pages/FAQPage';
+import FeedbackPage from './pages/FeedbackPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminLoginPage from './pages/AdminLoginPage';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
@@ -50,6 +52,8 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/faq" element={<FAQPage />} />
+              <Route path="/feedback" element={<FeedbackPage />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
               <Route path="/admin-login" element={<AdminLoginPage />} />
               <Route
                 path="/admin-panel"
@@ -64,8 +68,9 @@ function App() {
           <Footer />
         </div>
       </Router>
-    </LanguageProvider>
+   </LanguageProvider>
   );
 }
 
 export default App;
+

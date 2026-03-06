@@ -1,10 +1,11 @@
 import React from 'react';
 import { FaFacebook, FaPhone, FaMapMarkerAlt } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import './Footer.css';
 
 function Footer() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   return (
     <footer className="footer">
@@ -58,6 +59,28 @@ function Footer() {
                 <li>{t.footer.partner2}</li>
                 <li>{t.footer.partner3}</li>
               </ul>
+
+              {/* Quick Links */}
+              <h4 style={{ marginTop: '16px' }}>
+                {language === 'en' ? 'Quick Links' : 'Mabilis na Links'}
+              </h4>
+              <ul className="partners-list">
+                <li>
+                  <Link to="/faq" style={{ color: 'inherit', textDecoration: 'none' }}>
+                    {language === 'en' ? '❓ FAQ / Help' : '❓ FAQ / Tulong'}
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/feedback" style={{ color: 'inherit', textDecoration: 'none' }}>
+                    {language === 'en' ? '⭐ Share Feedback' : '⭐ Ibahagi ang Feedback'}
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/privacy-policy" style={{ color: 'inherit', textDecoration: 'none' }}>
+                    {language === 'en' ? '🔒 Privacy Policy' : '🔒 Patakaran sa Privacy'}
+                  </Link>
+                </li>
+              </ul>
             </div>
           </div>
 
@@ -71,7 +94,15 @@ function Footer() {
           </div>
 
           <div className="footer-copyright">
-            <p>{t.footer.copyright}</p>
+            <p>{t.footer.copyright} &nbsp;|&nbsp;
+              <Link to="/privacy-policy" style={{ color: 'inherit', textDecoration: 'underline', fontSize: '12px' }}>
+                {language === 'en' ? 'Privacy Policy' : 'Patakaran sa Privacy'}
+              </Link>
+              &nbsp;|&nbsp;
+              <Link to="/feedback" style={{ color: 'inherit', textDecoration: 'underline', fontSize: '12px' }}>
+                {language === 'en' ? 'Feedback' : 'Feedback'}
+              </Link>
+            </p>
           </div>
         </div>
       </div>
