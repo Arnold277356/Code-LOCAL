@@ -658,7 +658,7 @@ app.get('/api/admin/users', async (req, res) => {
   }
 });
 
-// DELETE user (Admin)
+// DELETE user (Admin) - first delete associated registrations
 app.delete('/api/admin/users/:id', async (req, res) => {
   const token = req.headers['x-admin-token'];
   if (token !== process.env.ADMIN_SECRET_TOKEN) {
@@ -666,12 +666,21 @@ app.delete('/api/admin/users/:id', async (req, res) => {
   }
 
   const { id } = req.params;
+  const client = await pool.connect();
   try {
-    await pool.query('DELETE FROM users WHERE id = $1', [id]);
-    res.json({ success: true, message: 'User deleted successfully.' });
+    await client.query('BEGIN');
+    // First delete all registrations associated with this user
+    await client.query('DELETE FROM registrations WHERE user_id = $1', [id]);
+    // Then delete the user
+    await client.query('DELETE FROM users WHERE id = $1', [id]);
+    await client.query('COMMIT');
+    res.json({ success: true, message: 'User and associated registrations deleted successfully.' });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Delete user error:', err);
     res.status(500).json({ error: 'Failed to delete user.' });
+  } finally {
+    client.release();
   }
 });
 
