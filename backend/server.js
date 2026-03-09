@@ -590,8 +590,8 @@ app.patch('/api/admin/registrations/:id/restore', async (req, res) => {
       // 1. Fetch user profile
       const userRes = await pool.query('SELECT id, email, first_name, last_name, contact, photo_url FROM users WHERE id = $1', [userId]);
       
-      // 2. Fetch all e-waste registrations for this user
-      const regRes = await pool.query('SELECT * FROM registrations WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+    // 2. Fetch all e-waste registrations for this user (exclude archived)
+    const regRes = await pool.query('SELECT * FROM registrations WHERE user_id = $1 AND is_archived IS NOT TRUE ORDER BY created_at DESC', [userId]);
       
       // 3. Calculate totals
       const totalWeight = regRes.rows.reduce((sum, r) => sum + parseFloat(r.weight || 0), 0);
