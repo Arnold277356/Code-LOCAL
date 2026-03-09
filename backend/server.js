@@ -5,8 +5,6 @@
   const bcrypt = require('bcrypt');
   require('dotenv').config();
   const { Resend } = require('resend');
-  
-  const axios = require('axios');
   const resend = new Resend(process.env.RESEND_API_KEY);
  
   // ── Email helper ───────────────────────────────────────────
@@ -98,43 +96,6 @@ async function sendStatusEmail(toEmail, userName, ewasteType, weight, newStatus,
     console.log(`✅ Email sent to ${toEmail} — Status: ${newStatus}`);
   } catch (err) {
     console.error('❌ Email failed:', err.message);
-  }
-}
-  const SEMAPHORE_API_KEY = process.env.SEMAPHORE_API_KEY;
-  const SEMAPHORE_SENDER = 'ECycleHub'; // max 11 chars, no spaces
-
-  // ── SMS helper ─────────────────────────────────────────────
-async function sendSMS(phoneNumber, message) {
-  if (!phoneNumber || !SEMAPHORE_API_KEY) return;
-
-  // Normalize PH number: 09xxxxxxxxx → 639xxxxxxxxx
-  let normalized = phoneNumber.replace(/\s+/g, '').replace(/^0/, '63');
-
-  try {
-    await axios.post('https://api.semaphore.co/api/v4/messages', {
-      apikey: SEMAPHORE_API_KEY,
-      number: normalized,
-      message: message,
-      sendername: SEMAPHORE_SENDER,
-    });
-    console.log(`✅ SMS sent to ${normalized}`);
-  } catch (err) {
-    console.error('❌ SMS failed:', err.response?.data || err.message);
-    // Don't throw — SMS failure should NOT break status update
-  }
-}
-
-function buildSMSMessage(userName, ewasteType, weight, newStatus, reward) {
-  const firstName = userName.split(' ')[0];
-  switch (newStatus) {
-    case 'In Progress':
-      return `Hi ${firstName}! Your e-waste drop-off (${ewasteType}, ${weight}kg) is now being processed by Barangay Burol 1 staff. We will notify you once verified. - E-Cycle Hub`;
-    case 'Done':
-      return `Hi ${firstName}! Your e-waste drop-off (${ewasteType}, ${weight}kg) has been VERIFIED! You earned P${parseFloat(reward || 0).toFixed(2)}. Visit Barangay Hall with valid ID to claim. - E-Cycle Hub`;
-    case 'Rejected':
-      return `Hi ${firstName}, your e-waste submission (${ewasteType}, ${weight}kg) could not be verified. Please visit Barangay Hall at Burol 1 for details. - E-Cycle Hub`;
-    default:
-      return null;
   }
 }
 
@@ -392,9 +353,6 @@ app.post('/api/admin/login', async (req, res) => {
       await Promise.allSettled([
         reg.email
           ? sendStatusEmail(reg.email, userName, reg.e_waste_type, reg.weight, status, reg.reward_points)
-          : Promise.resolve(),
-        reg.phone_number
-          ? sendSMS(reg.phone_number, buildSMSMessage(userName, reg.e_waste_type, reg.weight, status, reg.reward_points))
           : Promise.resolve(),
       ]);
     }
