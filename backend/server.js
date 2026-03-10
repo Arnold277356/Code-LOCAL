@@ -692,6 +692,43 @@ app.put('/api/user/:id', async (req, res) => {
   }
 });
 
+// CHANGE PASSWORD
+app.put('/api/user/:id/password', async (req, res) => {
+  const { id } = req.params;
+  const { current_password, new_password } = req.body;
+
+  if (!current_password || !new_password) {
+    return res.status(400).json({ error: 'Current and new password are required.' });
+  }
+
+  if (new_password.length < 6) {
+    return res.status(400).json({ error: 'New password must be at least 6 characters.' });
+  }
+
+  try {
+    // Fetch current hashed password
+    const result = await pool.query('SELECT password FROM users WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    // Verify current password
+    const validPass = await bcrypt.compare(current_password, result.rows[0].password);
+    if (!validPass) {
+      return res.status(401).json({ error: 'Current password is incorrect.' });
+    }
+
+    // Hash and save new password
+    const hashedNew = await bcrypt.hash(new_password, 10);
+    await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedNew, id]);
+
+    res.json({ success: true, message: 'Password changed successfully.' });
+  } catch (err) {
+    console.error('Change password error:', err);
+    res.status(500).json({ error: 'Failed to change password.' });
+  }
+});
+
   const PORT = process.env.PORT || 5000;
   initializeDatabase().then(() => {
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { FaSignOutAlt, FaPlus, FaMapMarkerAlt, FaGift, FaBell, FaDownload, FaTrophy, FaUserEdit, FaTimes } from 'react-icons/fa';
+import { FaSignOutAlt, FaPlus, FaMapMarkerAlt, FaGift, FaBell, FaDownload, FaTrophy, FaUserEdit, FaTimes, FaLock, FaUser } from 'react-icons/fa';
 import { useLanguage } from '../context/LanguageContext';
 
 const BACKEND = 'https://burol-1-web-backend.onrender.com';
@@ -21,10 +21,20 @@ function DashboardPage() {
   const [totalRewards, setTotalRewards] = useState(0);
   const { t } = useLanguage();
 
-  // Edit profile modal state
+  // Modal state
   const [showEditModal, setShowEditModal] = useState(false);
+  const [modalTab, setModalTab] = useState('profile'); // 'profile' | 'password'
+
+  // Profile form
   const [editForm, setEditForm] = useState({ first_name: '', last_name: '', email: '', phone_number: '' });
   const [editLoading, setEditLoading] = useState(false);
+
+  // Password form
+  const [passForm, setPassForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
+  const [passLoading, setPassLoading] = useState(false);
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
 
   useEffect(() => {
     const loggedInUser = JSON.parse(localStorage.getItem('user'));
@@ -48,14 +58,8 @@ function DashboardPage() {
           status: drop.status || 'Pending',
         }));
         setDrops(formattedDrops);
-
-        const confirmedWeight = formattedDrops
-          .filter(d => d.status === 'Done')
-          .reduce((sum, d) => sum + d.weight, 0);
-        const confirmedRewards = formattedDrops
-          .filter(d => d.status === 'Done')
-          .reduce((sum, d) => sum + d.reward, 0);
-
+        const confirmedWeight = formattedDrops.filter(d => d.status === 'Done').reduce((sum, d) => sum + d.weight, 0);
+        const confirmedRewards = formattedDrops.filter(d => d.status === 'Done').reduce((sum, d) => sum + d.reward, 0);
         setTotalWeight(confirmedWeight);
         setTotalRewards(confirmedRewards);
       }
@@ -64,22 +68,32 @@ function DashboardPage() {
     }
   };
 
-  const openEditModal = () => {
+  const openEditModal = (tab = 'profile') => {
     setEditForm({
       first_name: user.first_name || '',
       last_name: user.last_name || '',
       email: user.email || '',
       phone_number: user.phone_number || '',
     });
+    setPassForm({ current_password: '', new_password: '', confirm_password: '' });
+    setModalTab(tab);
     setShowEditModal(true);
   };
 
+  const closeModal = () => {
+    setShowEditModal(false);
+    setPassForm({ current_password: '', new_password: '', confirm_password: '' });
+    setShowCurrentPass(false);
+    setShowNewPass(false);
+    setShowConfirmPass(false);
+  };
+
+  // ── Save profile ──────────────────────────────────────────
   const handleEditSubmit = async () => {
     if (!editForm.first_name || !editForm.last_name || !editForm.email) {
       Swal.fire({ icon: 'warning', title: 'Required', text: 'First name, last name, and email are required.', confirmButtonColor: '#10b981' });
       return;
     }
-
     setEditLoading(true);
     try {
       const res = await fetch(`${BACKEND}/api/user/${user.id}`, {
@@ -87,16 +101,13 @@ function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm),
       });
-
       const data = await res.json();
-
       if (res.ok && data.success) {
-        // Update localStorage with new user info
         const updatedUser = { ...user, ...data.user };
         localStorage.setItem('user', JSON.stringify(updatedUser));
         setUser(updatedUser);
-        setShowEditModal(false);
-        Swal.fire({ icon: 'success', title: 'Profile Updated!', text: 'Your profile has been saved successfully.', confirmButtonColor: '#10b981', timer: 2000, showConfirmButton: false });
+        closeModal();
+        Swal.fire({ icon: 'success', title: 'Profile Updated!', confirmButtonColor: '#10b981', timer: 2000, showConfirmButton: false });
       } else {
         Swal.fire({ icon: 'error', title: 'Failed', text: data.error || 'Could not update profile.', confirmButtonColor: '#10b981' });
       }
@@ -107,15 +118,53 @@ function DashboardPage() {
     }
   };
 
+  // ── Change password ───────────────────────────────────────
+  const handlePasswordSubmit = async () => {
+    if (!passForm.current_password || !passForm.new_password || !passForm.confirm_password) {
+      Swal.fire({ icon: 'warning', title: 'Required', text: 'Please fill in all password fields.', confirmButtonColor: '#10b981' });
+      return;
+    }
+    if (passForm.new_password.length < 6) {
+      Swal.fire({ icon: 'warning', title: 'Too Short', text: 'New password must be at least 6 characters.', confirmButtonColor: '#10b981' });
+      return;
+    }
+    if (passForm.new_password !== passForm.confirm_password) {
+      Swal.fire({ icon: 'warning', title: 'Mismatch', text: 'New passwords do not match.', confirmButtonColor: '#10b981' });
+      return;
+    }
+    if (passForm.current_password === passForm.new_password) {
+      Swal.fire({ icon: 'warning', title: 'Same Password', text: 'New password must be different from your current password.', confirmButtonColor: '#10b981' });
+      return;
+    }
+
+    setPassLoading(true);
+    try {
+      const res = await fetch(`${BACKEND}/api/user/${user.id}/password`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          current_password: passForm.current_password,
+          new_password: passForm.new_password,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        closeModal();
+        Swal.fire({ icon: 'success', title: 'Password Changed!', text: 'Your password has been updated successfully.', confirmButtonColor: '#10b981', timer: 2000, showConfirmButton: false });
+      } else {
+        Swal.fire({ icon: 'error', title: 'Failed', text: data.error || 'Could not change password.', confirmButtonColor: '#10b981' });
+      }
+    } catch (err) {
+      Swal.fire({ icon: 'error', title: 'Error', text: 'Server error. Please try again.', confirmButtonColor: '#10b981' });
+    } finally {
+      setPassLoading(false);
+    }
+  };
+
   const handleClaimReward = () => {
     const claimableDone = drops.filter(d => d.status === 'Done');
     if (claimableDone.length === 0) {
-      Swal.fire({
-        icon: 'info',
-        title: t.dashboard.noClaimableTitle || 'No Claimable Rewards',
-        text: t.dashboard.noClaimableText || 'You have no completed drop-offs yet. Rewards are only available once your submission is marked as Done.',
-        confirmButtonColor: '#10b981'
-      });
+      Swal.fire({ icon: 'info', title: t.dashboard.noClaimableTitle || 'No Claimable Rewards', text: t.dashboard.noClaimableText || 'Rewards are only available once your submission is marked as Done.', confirmButtonColor: '#10b981' });
       return;
     }
     Swal.fire({
@@ -123,7 +172,7 @@ function DashboardPage() {
       title: '🎉 ' + (t.dashboard.claimTitle || 'How to Claim Your Reward'),
       html: `
         <div style="text-align:left; font-size:14px; line-height:1.8">
-          <p style="margin-bottom:12px"><strong>${t.dashboard.claimRewardAmount || 'Your claimable reward:'}</strong> 
+          <p style="margin-bottom:12px"><strong>${t.dashboard.claimRewardAmount || 'Your claimable reward:'}</strong>
             <span style="color:#10b981; font-size:18px; font-weight:bold"> ₱${totalRewards.toFixed(2)}</span>
           </p>
           <ol style="padding-left:20px">
@@ -133,9 +182,7 @@ function DashboardPage() {
             <li>${t.dashboard.claimStep4 || 'Barangay staff will verify your submission and release your voucher'}</li>
             <li>${t.dashboard.claimStep5 || 'Vouchers are valid for 12 months from date of issuance'}</li>
           </ol>
-          <p style="margin-top:12px; color:#6b7280; font-size:12px">
-            📞 ${t.dashboard.claimContact || 'For inquiries:'} 09916338752
-          </p>
+          <p style="margin-top:12px; color:#6b7280; font-size:12px">📞 ${t.dashboard.claimContact || 'For inquiries:'} 09916338752</p>
         </div>
       `,
       confirmButtonColor: '#10b981',
@@ -145,85 +192,64 @@ function DashboardPage() {
 
   const handleDownloadCertificate = (drop) => {
     if (drop.status !== 'Done') {
-      Swal.fire({
-        icon: 'warning',
-        title: t.dashboard.certNotReady || 'Certificate Not Ready',
-        text: t.dashboard.certNotReadyText || 'Your certificate will be available once your drop-off is marked as Done.',
-        confirmButtonColor: '#10b981'
-      });
+      Swal.fire({ icon: 'warning', title: t.dashboard.certNotReady || 'Certificate Not Ready', text: t.dashboard.certNotReadyText || 'Your certificate will be available once your drop-off is marked as Done.', confirmButtonColor: '#10b981' });
       return;
     }
-
     const certWindow = window.open('', '_blank');
     certWindow.document.write(`
-      <html>
-        <head>
-          <title>E-Waste Drop-off Certificate</title>
-          <style>
-            body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
-            .header { text-align: center; border-bottom: 3px solid #10b981; padding-bottom: 20px; margin-bottom: 30px; }
-            .logo { font-size: 48px; }
-            .title { font-size: 24px; font-weight: bold; color: #10b981; margin: 10px 0; }
-            .subtitle { color: #6b7280; font-size: 14px; }
-            .cert-body { border: 2px solid #d1fae5; border-radius: 12px; padding: 24px; background: #f0fdf4; }
-            .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #d1fae5; }
-            .label { color: #6b7280; font-size: 14px; }
-            .value { font-weight: bold; color: #111; font-size: 14px; }
-            .reward-box { background: #10b981; color: white; text-align: center; padding: 16px; border-radius: 8px; margin-top: 20px; }
-            .reward-amount { font-size: 32px; font-weight: bold; }
-            .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 12px; }
-            .status-badge { background: #d1fae5; color: #065f46; padding: 2px 10px; border-radius: 999px; font-size: 12px; }
-            @media print { body { margin: 0; } }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="logo">♻️</div>
-            <div class="title">E-Cycle Hub</div>
-            <div class="subtitle">Barangay Burol 1, Dasmariñas City, Cavite</div>
-            <div class="subtitle" style="margin-top:8px; font-weight:bold; color:#10b981">E-WASTE DROP-OFF CERTIFICATE</div>
-          </div>
-          <div class="cert-body">
-            <div class="row"><span class="label">Resident Name</span><span class="value">${user?.first_name || ''} ${user?.last_name || ''}</span></div>
-            <div class="row"><span class="label">Username</span><span class="value">${user?.username || ''}</span></div>
-            <div class="row"><span class="label">E-Waste Type</span><span class="value">${drop.type}</span></div>
-            <div class="row"><span class="label">Weight</span><span class="value">${drop.weight} kg</span></div>
-            <div class="row"><span class="label">Drop-off Location</span><span class="value">${drop.location}</span></div>
-            <div class="row"><span class="label">Date Submitted</span><span class="value">${new Date(drop.date).toLocaleDateString('en-PH', { year:'numeric', month:'long', day:'numeric' })}</span></div>
-            <div class="row"><span class="label">Status</span><span class="status-badge">✓ ${drop.status}</span></div>
-            <div class="reward-box">
-              <div style="font-size:13px; opacity:0.9">Reward Earned</div>
-              <div class="reward-amount">₱${drop.reward.toFixed(2)}</div>
-              <div style="font-size:11px; opacity:0.8; margin-top:4px">Present this certificate at Barangay Hall to claim</div>
-            </div>
-          </div>
-          <div class="footer">
-            <p>Certificate ID: ECH-${drop.id}-${Date.now().toString().slice(-6)}</p>
-            <p>This certificate serves as proof of e-waste drop-off. Claim reward at Barangay Hall with valid ID.</p>
-            <p>📞 09916338752 | Burol 1, Dasmariñas Cavite</p>
-            <p style="margin-top:16px; color:#10b981">© E-Cycle Hub 2024</p>
-          </div>
-          <script>window.onload = () => window.print();</script>
-        </body>
-      </html>
+      <html><head><title>E-Waste Drop-off Certificate</title>
+      <style>
+        body{font-family:Arial,sans-serif;max-width:600px;margin:40px auto;padding:20px}
+        .header{text-align:center;border-bottom:3px solid #10b981;padding-bottom:20px;margin-bottom:30px}
+        .title{font-size:24px;font-weight:bold;color:#10b981;margin:10px 0}
+        .subtitle{color:#6b7280;font-size:14px}
+        .cert-body{border:2px solid #d1fae5;border-radius:12px;padding:24px;background:#f0fdf4}
+        .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #d1fae5}
+        .label{color:#6b7280;font-size:14px}.value{font-weight:bold;color:#111;font-size:14px}
+        .reward-box{background:#10b981;color:white;text-align:center;padding:16px;border-radius:8px;margin-top:20px}
+        .reward-amount{font-size:32px;font-weight:bold}
+        .footer{text-align:center;margin-top:30px;color:#6b7280;font-size:12px}
+        .status-badge{background:#d1fae5;color:#065f46;padding:2px 10px;border-radius:999px;font-size:12px}
+        @media print{body{margin:0}}
+      </style></head><body>
+      <div class="header"><div style="font-size:48px">♻️</div>
+        <div class="title">E-Cycle Hub</div>
+        <div class="subtitle">Barangay Burol 1, Dasmariñas City, Cavite</div>
+        <div class="subtitle" style="margin-top:8px;font-weight:bold;color:#10b981">E-WASTE DROP-OFF CERTIFICATE</div>
+      </div>
+      <div class="cert-body">
+        <div class="row"><span class="label">Resident Name</span><span class="value">${user?.first_name || ''} ${user?.last_name || ''}</span></div>
+        <div class="row"><span class="label">Username</span><span class="value">${user?.username || ''}</span></div>
+        <div class="row"><span class="label">E-Waste Type</span><span class="value">${drop.type}</span></div>
+        <div class="row"><span class="label">Weight</span><span class="value">${drop.weight} kg</span></div>
+        <div class="row"><span class="label">Drop-off Location</span><span class="value">${drop.location}</span></div>
+        <div class="row"><span class="label">Date Submitted</span><span class="value">${new Date(drop.date).toLocaleDateString('en-PH',{year:'numeric',month:'long',day:'numeric'})}</span></div>
+        <div class="row"><span class="label">Status</span><span class="status-badge">✓ ${drop.status}</span></div>
+        <div class="reward-box">
+          <div style="font-size:13px;opacity:.9">Reward Earned</div>
+          <div class="reward-amount">₱${drop.reward.toFixed(2)}</div>
+          <div style="font-size:11px;opacity:.8;margin-top:4px">Present this certificate at Barangay Hall to claim</div>
+        </div>
+      </div>
+      <div class="footer">
+        <p>Certificate ID: ECH-${drop.id}-${Date.now().toString().slice(-6)}</p>
+        <p>This certificate serves as proof of e-waste drop-off. Claim reward at Barangay Hall with valid ID.</p>
+        <p>📞 09916338752 | Burol 1, Dasmariñas Cavite</p>
+        <p style="margin-top:16px;color:#10b981">© E-Cycle Hub 2024</p>
+      </div>
+      <script>window.onload=()=>window.print();</script>
+      </body></html>
     `);
     certWindow.document.close();
   };
 
   const handleLogout = () => {
     Swal.fire({
-      icon: 'question',
-      title: t.dashboard.logoutConfirm,
-      text: t.dashboard.logoutText,
-      showCancelButton: true,
-      confirmButtonColor: '#10b981',
-      cancelButtonColor: '#6b7280',
+      icon: 'question', title: t.dashboard.logoutConfirm, text: t.dashboard.logoutText,
+      showCancelButton: true, confirmButtonColor: '#10b981', cancelButtonColor: '#6b7280',
       confirmButtonText: t.dashboard.logoutYes
     }).then((result) => {
-      if (result.isConfirmed) {
-        localStorage.removeItem('user');
-        navigate('/login');
-      }
+      if (result.isConfirmed) { localStorage.removeItem('user'); navigate('/login'); }
     });
   };
 
@@ -235,7 +261,7 @@ function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
 
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="bg-gradient-to-r from-emerald-600 to-green-600 text-white sticky top-0 z-40 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -248,7 +274,7 @@ function DashboardPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={openEditModal}
+            <button onClick={() => openEditModal('profile')}
               className="flex items-center gap-2 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold text-sm transition-all">
               <FaUserEdit /> <span className="hidden sm:inline">Edit Profile</span>
             </button>
@@ -272,8 +298,7 @@ function DashboardPage() {
                 <p className="text-yellow-100 text-sm">₱{totalRewards.toFixed(2)} {t.dashboard.earned} • {doneDrops.length} {t.dashboard.ewasteItems}</p>
               </div>
             </div>
-            <button onClick={handleClaimReward}
-              className="bg-white text-orange-500 font-bold px-6 py-2 rounded-lg hover:bg-yellow-50 transition-all shadow">
+            <button onClick={handleClaimReward} className="bg-white text-orange-500 font-bold px-6 py-2 rounded-lg hover:bg-yellow-50 transition-all shadow">
               {t.dashboard.claimNow || 'How to Claim →'}
             </button>
           </div>
@@ -353,16 +378,23 @@ function DashboardPage() {
             </div>
           </div>
 
-          {/* Quick Actions */}
+          {/* Sidebar */}
           <div className="space-y-6">
             {/* Profile Card */}
             <div className="bg-white rounded-xl shadow-soft p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-gray-900">My Profile</h2>
-                <button onClick={openEditModal}
-                  className="text-xs text-emerald-600 hover:text-emerald-800 font-semibold flex items-center gap-1">
-                  <FaUserEdit size={12} /> Edit
-                </button>
+                <div className="flex gap-2">
+                  <button onClick={() => openEditModal('profile')}
+                    className="text-xs text-emerald-600 hover:text-emerald-800 font-semibold flex items-center gap-1">
+                    <FaUserEdit size={12} /> Edit
+                  </button>
+                  <span className="text-gray-300">|</span>
+                  <button onClick={() => openEditModal('password')}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1">
+                    <FaLock size={11} /> Password
+                  </button>
+                </div>
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
@@ -379,7 +411,7 @@ function DashboardPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Phone</span>
-                  <span className="font-semibold text-gray-800">{user.phone_number || <span className="text-gray-400 italic">Not set</span>}</span>
+                  <span className="font-semibold text-gray-800 text-xs">{user.phone_number || <span className="text-gray-400 italic">Not set</span>}</span>
                 </div>
               </div>
             </div>
@@ -405,7 +437,6 @@ function DashboardPage() {
                     </div>
                   </button>
                 ))}
-
                 {pendingDrops.length > 0 && (
                   <div className="mt-2 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800">
                     <p className="font-semibold">⏳ {pendingDrops.length} submission{pendingDrops.length > 1 ? 's' : ''} pending verification</p>
@@ -418,86 +449,152 @@ function DashboardPage() {
         </div>
       </div>
 
-      {/* ── EDIT PROFILE MODAL ── */}
+      {/* ── EDIT PROFILE / CHANGE PASSWORD MODAL ── */}
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
-            <button onClick={() => setShowEditModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md relative overflow-hidden">
+
+            {/* Close button */}
+            <button onClick={closeModal}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10">
               <FaTimes size={18} />
             </button>
 
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
-                <FaUserEdit className="text-emerald-600" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">Edit Profile</h2>
-                <p className="text-xs text-gray-500">Update your personal information</p>
-              </div>
+            {/* Tab header */}
+            <div className="flex border-b border-gray-200">
+              <button
+                onClick={() => setModalTab('profile')}
+                className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-semibold transition-all ${modalTab === 'profile' ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50' : 'text-gray-500 hover:text-gray-700'}`}>
+                <FaUser size={13} /> Edit Profile
+              </button>
+              <button
+                onClick={() => setModalTab('password')}
+                className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-semibold transition-all ${modalTab === 'password' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' : 'text-gray-500 hover:text-gray-700'}`}>
+                <FaLock size={13} /> Change Password
+              </button>
             </div>
 
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">First Name *</label>
-                  <input
-                    type="text"
-                    value={editForm.first_name}
-                    onChange={e => setEditForm(prev => ({ ...prev, first_name: e.target.value }))}
-                    className="w-full p-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                    placeholder="First name"
-                  />
+            <div className="p-6">
+
+              {/* ── PROFILE TAB ── */}
+              {modalTab === 'profile' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">First Name *</label>
+                      <input type="text" value={editForm.first_name}
+                        onChange={e => setEditForm(p => ({ ...p, first_name: e.target.value }))}
+                        className="w-full p-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                        placeholder="First name" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Last Name *</label>
+                      <input type="text" value={editForm.last_name}
+                        onChange={e => setEditForm(p => ({ ...p, last_name: e.target.value }))}
+                        className="w-full p-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                        placeholder="Last name" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Email *</label>
+                    <input type="email" value={editForm.email}
+                      onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))}
+                      className="w-full p-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                      placeholder="Email address" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Phone Number <span className="text-gray-400 font-normal">(optional)</span></label>
+                    <input type="tel" value={editForm.phone_number}
+                      onChange={e => setEditForm(p => ({ ...p, phone_number: e.target.value }))}
+                      className="w-full p-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                      placeholder="09xxxxxxxxx" />
+                    <p className="text-xs text-gray-400 mt-1">Used for SMS notifications on status changes.</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-500">
+                    ℹ️ Username <strong>@{user.username}</strong> cannot be changed.
+                  </div>
+                  <div className="flex gap-3 pt-2">
+                    <button onClick={closeModal}
+                      className="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 rounded-lg font-semibold text-sm hover:bg-gray-50 transition-all">
+                      Cancel
+                    </button>
+                    <button onClick={handleEditSubmit} disabled={editLoading}
+                      className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-sm transition-all disabled:opacity-50">
+                      {editLoading ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Last Name *</label>
-                  <input
-                    type="text"
-                    value={editForm.last_name}
-                    onChange={e => setEditForm(prev => ({ ...prev, last_name: e.target.value }))}
-                    className="w-full p-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                    placeholder="Last name"
-                  />
+              )}
+
+              {/* ── PASSWORD TAB ── */}
+              {modalTab === 'password' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Current Password *</label>
+                    <div className="relative">
+                      <input
+                        type={showCurrentPass ? 'text' : 'password'}
+                        value={passForm.current_password}
+                        onChange={e => setPassForm(p => ({ ...p, current_password: e.target.value }))}
+                        className="w-full p-2.5 pr-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+                        placeholder="Enter current password" />
+                      <button type="button" onClick={() => setShowCurrentPass(p => !p)}
+                        className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 text-xs">
+                        {showCurrentPass ? '🙈' : '👁️'}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">New Password *</label>
+                    <div className="relative">
+                      <input
+                        type={showNewPass ? 'text' : 'password'}
+                        value={passForm.new_password}
+                        onChange={e => setPassForm(p => ({ ...p, new_password: e.target.value }))}
+                        className="w-full p-2.5 pr-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+                        placeholder="Enter new password" />
+                      <button type="button" onClick={() => setShowNewPass(p => !p)}
+                        className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 text-xs">
+                        {showNewPass ? '🙈' : '👁️'}
+                      </button>
+                    </div>
+                    {passForm.new_password.length > 0 && passForm.new_password.length < 6 && (
+                      <p className="text-xs text-red-500 mt-1">Must be at least 6 characters</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Confirm New Password *</label>
+                    <div className="relative">
+                      <input
+                        type={showConfirmPass ? 'text' : 'password'}
+                        value={passForm.confirm_password}
+                        onChange={e => setPassForm(p => ({ ...p, confirm_password: e.target.value }))}
+                        className="w-full p-2.5 pr-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+                        placeholder="Repeat new password" />
+                      <button type="button" onClick={() => setShowConfirmPass(p => !p)}
+                        className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 text-xs">
+                        {showConfirmPass ? '🙈' : '👁️'}
+                      </button>
+                    </div>
+                    {passForm.confirm_password.length > 0 && passForm.new_password !== passForm.confirm_password && (
+                      <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
+                    )}
+                    {passForm.confirm_password.length > 0 && passForm.new_password === passForm.confirm_password && passForm.new_password.length >= 6 && (
+                      <p className="text-xs text-emerald-500 mt-1">✓ Passwords match</p>
+                    )}
+                  </div>
+                  <div className="flex gap-3 pt-2">
+                    <button onClick={closeModal}
+                      className="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 rounded-lg font-semibold text-sm hover:bg-gray-50 transition-all">
+                      Cancel
+                    </button>
+                    <button onClick={handlePasswordSubmit} disabled={passLoading}
+                      className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm transition-all disabled:opacity-50">
+                      {passLoading ? 'Updating...' : 'Change Password'}
+                    </button>
+                  </div>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Email *</label>
-                <input
-                  type="email"
-                  value={editForm.email}
-                  onChange={e => setEditForm(prev => ({ ...prev, email: e.target.value }))}
-                  className="w-full p-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                  placeholder="Email address"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Phone Number <span className="text-gray-400 font-normal">(optional)</span></label>
-                <input
-                  type="tel"
-                  value={editForm.phone_number}
-                  onChange={e => setEditForm(prev => ({ ...prev, phone_number: e.target.value }))}
-                  className="w-full p-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                  placeholder="09xxxxxxxxx"
-                />
-                <p className="text-xs text-gray-400 mt-1">Used for SMS notifications when your drop-off status changes.</p>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-500">
-                ℹ️ Username cannot be changed. To update your password, please contact the barangay admin.
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => setShowEditModal(false)}
-                className="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 rounded-lg font-semibold text-sm hover:bg-gray-50 transition-all">
-                Cancel
-              </button>
-              <button onClick={handleEditSubmit} disabled={editLoading}
-                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-sm transition-all disabled:opacity-50">
-                {editLoading ? 'Saving...' : 'Save Changes'}
-              </button>
+              )}
             </div>
           </div>
         </div>
