@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { FaSignOutAlt, FaPlus, FaMapMarkerAlt, FaGift, FaBell, FaDownload, FaTrophy } from 'react-icons/fa';
+import { FaSignOutAlt, FaPlus, FaMapMarkerAlt, FaGift, FaBell, FaDownload, FaTrophy, FaUserEdit, FaTimes } from 'react-icons/fa';
 import { useLanguage } from '../context/LanguageContext';
+
+const BACKEND = 'https://burol-1-web-backend.onrender.com';
 
 const STATUS_STYLES = {
   'Pending':     'bg-yellow-100 text-yellow-800',
@@ -19,6 +21,11 @@ function DashboardPage() {
   const [totalRewards, setTotalRewards] = useState(0);
   const { t } = useLanguage();
 
+  // Edit profile modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({ first_name: '', last_name: '', email: '', phone_number: '' });
+  const [editLoading, setEditLoading] = useState(false);
+
   useEffect(() => {
     const loggedInUser = JSON.parse(localStorage.getItem('user'));
     if (!loggedInUser) { navigate('/login'); return; }
@@ -28,7 +35,7 @@ function DashboardPage() {
 
   const loadDrops = async (userId) => {
     try {
-      const response = await fetch(`https://burol-1-web-backend.onrender.com/api/user/${userId}`);
+      const response = await fetch(`${BACKEND}/api/user/${userId}`);
       const data = await response.json();
       if (data.success) {
         const formattedDrops = data.user.registrations.map(drop => ({
@@ -42,7 +49,6 @@ function DashboardPage() {
         }));
         setDrops(formattedDrops);
 
-        // ✅ Only count rewards for "Done" drops
         const confirmedWeight = formattedDrops
           .filter(d => d.status === 'Done')
           .reduce((sum, d) => sum + d.weight, 0);
@@ -55,6 +61,49 @@ function DashboardPage() {
       }
     } catch (error) {
       console.error('Error loading drops:', error);
+    }
+  };
+
+  const openEditModal = () => {
+    setEditForm({
+      first_name: user.first_name || '',
+      last_name: user.last_name || '',
+      email: user.email || '',
+      phone_number: user.phone_number || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editForm.first_name || !editForm.last_name || !editForm.email) {
+      Swal.fire({ icon: 'warning', title: 'Required', text: 'First name, last name, and email are required.', confirmButtonColor: '#10b981' });
+      return;
+    }
+
+    setEditLoading(true);
+    try {
+      const res = await fetch(`${BACKEND}/api/user/${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        // Update localStorage with new user info
+        const updatedUser = { ...user, ...data.user };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        setUser(updatedUser);
+        setShowEditModal(false);
+        Swal.fire({ icon: 'success', title: 'Profile Updated!', text: 'Your profile has been saved successfully.', confirmButtonColor: '#10b981', timer: 2000, showConfirmButton: false });
+      } else {
+        Swal.fire({ icon: 'error', title: 'Failed', text: data.error || 'Could not update profile.', confirmButtonColor: '#10b981' });
+      }
+    } catch (err) {
+      Swal.fire({ icon: 'error', title: 'Error', text: 'Server error. Please try again.', confirmButtonColor: '#10b981' });
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -105,7 +154,6 @@ function DashboardPage() {
       return;
     }
 
-    // Generate a printable certificate in a new window
     const certWindow = window.open('', '_blank');
     certWindow.document.write(`
       <html>
@@ -135,50 +183,26 @@ function DashboardPage() {
             <div class="subtitle">Barangay Burol 1, Dasmariñas City, Cavite</div>
             <div class="subtitle" style="margin-top:8px; font-weight:bold; color:#10b981">E-WASTE DROP-OFF CERTIFICATE</div>
           </div>
-
           <div class="cert-body">
-            <div class="row">
-              <span class="label">Resident Name</span>
-              <span class="value">${user?.first_name || ''} ${user?.last_name || ''}</span>
-            </div>
-            <div class="row">
-              <span class="label">Username</span>
-              <span class="value">${user?.username || ''}</span>
-            </div>
-            <div class="row">
-              <span class="label">E-Waste Type</span>
-              <span class="value">${drop.type}</span>
-            </div>
-            <div class="row">
-              <span class="label">Weight</span>
-              <span class="value">${drop.weight} kg</span>
-            </div>
-            <div class="row">
-              <span class="label">Drop-off Location</span>
-              <span class="value">${drop.location}</span>
-            </div>
-            <div class="row">
-              <span class="label">Date Submitted</span>
-              <span class="value">${new Date(drop.date).toLocaleDateString('en-PH', { year:'numeric', month:'long', day:'numeric' })}</span>
-            </div>
-            <div class="row">
-              <span class="label">Status</span>
-              <span class="status-badge">✓ ${drop.status}</span>
-            </div>
+            <div class="row"><span class="label">Resident Name</span><span class="value">${user?.first_name || ''} ${user?.last_name || ''}</span></div>
+            <div class="row"><span class="label">Username</span><span class="value">${user?.username || ''}</span></div>
+            <div class="row"><span class="label">E-Waste Type</span><span class="value">${drop.type}</span></div>
+            <div class="row"><span class="label">Weight</span><span class="value">${drop.weight} kg</span></div>
+            <div class="row"><span class="label">Drop-off Location</span><span class="value">${drop.location}</span></div>
+            <div class="row"><span class="label">Date Submitted</span><span class="value">${new Date(drop.date).toLocaleDateString('en-PH', { year:'numeric', month:'long', day:'numeric' })}</span></div>
+            <div class="row"><span class="label">Status</span><span class="status-badge">✓ ${drop.status}</span></div>
             <div class="reward-box">
               <div style="font-size:13px; opacity:0.9">Reward Earned</div>
               <div class="reward-amount">₱${drop.reward.toFixed(2)}</div>
               <div style="font-size:11px; opacity:0.8; margin-top:4px">Present this certificate at Barangay Hall to claim</div>
             </div>
           </div>
-
           <div class="footer">
             <p>Certificate ID: ECH-${drop.id}-${Date.now().toString().slice(-6)}</p>
             <p>This certificate serves as proof of e-waste drop-off. Claim reward at Barangay Hall with valid ID.</p>
             <p>📞 09916338752 | Burol 1, Dasmariñas Cavite</p>
             <p style="margin-top:16px; color:#10b981">© E-Cycle Hub 2024</p>
           </div>
-
           <script>window.onload = () => window.print();</script>
         </body>
       </html>
@@ -210,6 +234,8 @@ function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+
+      {/* ── Header ── */}
       <div className="bg-gradient-to-r from-emerald-600 to-green-600 text-white sticky top-0 z-40 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -221,32 +247,33 @@ function DashboardPage() {
               <p className="text-xs sm:text-sm text-emerald-100">{t.dashboard.welcome} {user.first_name || user.username}</p>
             </div>
           </div>
-          <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold text-sm transition-all">
-            <FaSignOutAlt /> {t.dashboard.logout}
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={openEditModal}
+              className="flex items-center gap-2 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold text-sm transition-all">
+              <FaUserEdit /> <span className="hidden sm:inline">Edit Profile</span>
+            </button>
+            <button onClick={handleLogout}
+              className="flex items-center gap-2 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold text-sm transition-all">
+              <FaSignOutAlt /> <span className="hidden sm:inline">{t.dashboard.logout}</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
 
-        {/* Claim Reward Banner — only shows if has Done drops */}
+        {/* Claim Reward Banner */}
         {doneDrops.length > 0 && (
           <div className="mb-6 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
             <div className="flex items-center gap-3">
               <FaTrophy className="text-white text-3xl" />
               <div>
-                <p className="text-white font-bold text-lg">
-                  {t.dashboard.rewardReady || 'You have rewards to claim!'}
-                </p>
-                <p className="text-yellow-100 text-sm">
-                  ₱{totalRewards.toFixed(2)} {t.dashboard.earned} • {doneDrops.length} {t.dashboard.ewasteItems}
-                </p>
+                <p className="text-white font-bold text-lg">{t.dashboard.rewardReady || 'You have rewards to claim!'}</p>
+                <p className="text-yellow-100 text-sm">₱{totalRewards.toFixed(2)} {t.dashboard.earned} • {doneDrops.length} {t.dashboard.ewasteItems}</p>
               </div>
             </div>
-            <button
-              onClick={handleClaimReward}
-              className="bg-white text-orange-500 font-bold px-6 py-2 rounded-lg hover:bg-yellow-50 transition-all shadow"
-            >
+            <button onClick={handleClaimReward}
+              className="bg-white text-orange-500 font-bold px-6 py-2 rounded-lg hover:bg-yellow-50 transition-all shadow">
               {t.dashboard.claimNow || 'How to Claim →'}
             </button>
           </div>
@@ -254,33 +281,23 @@ function DashboardPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-soft p-6 hover:shadow-medium transition-all duration-300 transform hover:scale-105">
-            <div className="text-4xl mb-4">📦</div>
-            <h3 className="text-sm font-semibold text-gray-600 mb-2">{t.dashboard.totalDrops}</h3>
-            <p className="text-3xl font-bold text-emerald-600">{drops.length}</p>
-            <p className="text-xs text-gray-500 mt-2">{t.dashboard.ewasteItems}</p>
-          </div>
-          <div className="bg-white rounded-xl shadow-soft p-6 hover:shadow-medium transition-all duration-300 transform hover:scale-105">
-            <div className="text-4xl mb-4">⚖️</div>
-            <h3 className="text-sm font-semibold text-gray-600 mb-2">{t.dashboard.totalWeight}</h3>
-            <p className="text-3xl font-bold text-emerald-600">{totalWeight.toFixed(1)} kg</p>
-            <p className="text-xs text-gray-500 mt-2">{t.dashboard.recycled} <span className="text-emerald-500 font-semibold">(verified)</span></p>
-          </div>
-          <div className="bg-white rounded-xl shadow-soft p-6 hover:shadow-medium transition-all duration-300 transform hover:scale-105">
-            <div className="text-4xl mb-4">💰</div>
-            <h3 className="text-sm font-semibold text-gray-600 mb-2">{t.dashboard.totalRewards}</h3>
-            <p className="text-3xl font-bold text-emerald-600">₱{totalRewards.toFixed(2)}</p>
-            <p className="text-xs text-gray-500 mt-2">{t.dashboard.earned} <span className="text-emerald-500 font-semibold">(verified only)</span></p>
-          </div>
-          <div className="bg-white rounded-xl shadow-soft p-6 hover:shadow-medium transition-all duration-300 transform hover:scale-105">
-            <div className="text-4xl mb-4">🌍</div>
-            <h3 className="text-sm font-semibold text-gray-600 mb-2">{t.dashboard.envImpact}</h3>
-            <p className="text-3xl font-bold text-emerald-600">{(totalWeight * 10).toFixed(0)}</p>
-            <p className="text-xs text-gray-500 mt-2">{t.dashboard.co2Saved}</p>
-          </div>
+          {[
+            { icon: '📦', label: t.dashboard.totalDrops, value: drops.length, sub: t.dashboard.ewasteItems },
+            { icon: '⚖️', label: t.dashboard.totalWeight, value: `${totalWeight.toFixed(1)} kg`, sub: <>{t.dashboard.recycled} <span className="text-emerald-500 font-semibold">(verified)</span></> },
+            { icon: '💰', label: t.dashboard.totalRewards, value: `₱${totalRewards.toFixed(2)}`, sub: <>{t.dashboard.earned} <span className="text-emerald-500 font-semibold">(verified only)</span></> },
+            { icon: '🌍', label: t.dashboard.envImpact, value: (totalWeight * 10).toFixed(0), sub: t.dashboard.co2Saved },
+          ].map((stat, i) => (
+            <div key={i} className="bg-white rounded-xl shadow-soft p-6 hover:shadow-medium transition-all duration-300 transform hover:scale-105">
+              <div className="text-4xl mb-4">{stat.icon}</div>
+              <h3 className="text-sm font-semibold text-gray-600 mb-2">{stat.label}</h3>
+              <p className="text-3xl font-bold text-emerald-600">{stat.value}</p>
+              <p className="text-xs text-gray-500 mt-2">{stat.sub}</p>
+            </div>
+          ))}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
           {/* Drop History */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-xl shadow-soft p-6">
@@ -313,8 +330,7 @@ function DashboardPage() {
                           <td className="py-3 px-2">
                             {drop.status === 'Done'
                               ? <span className="text-emerald-600 font-semibold">₱{drop.reward.toFixed(2)}</span>
-                              : <span className="text-gray-400 text-xs">Pending verification</span>
-                            }
+                              : <span className="text-gray-400 text-xs">Pending verification</span>}
                           </td>
                           <td className="py-3 px-2">
                             <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${STATUS_STYLES[drop.status] || STATUS_STYLES['Pending']}`}>
@@ -322,11 +338,9 @@ function DashboardPage() {
                             </span>
                           </td>
                           <td className="py-3 px-2">
-                            <button
-                              onClick={() => handleDownloadCertificate(drop)}
+                            <button onClick={() => handleDownloadCertificate(drop)}
                               title={drop.status === 'Done' ? 'Download Certificate' : 'Available when Done'}
-                              className={`p-1.5 rounded-lg transition-all ${drop.status === 'Done' ? 'text-emerald-600 hover:bg-emerald-50' : 'text-gray-300 cursor-not-allowed'}`}
-                            >
+                              className={`p-1.5 rounded-lg transition-all ${drop.status === 'Done' ? 'text-emerald-600 hover:bg-emerald-50' : 'text-gray-300 cursor-not-allowed'}`}>
                               <FaDownload />
                             </button>
                           </td>
@@ -340,9 +354,39 @@ function DashboardPage() {
           </div>
 
           {/* Quick Actions */}
-          <div>
+          <div className="space-y-6">
+            {/* Profile Card */}
             <div className="bg-white rounded-xl shadow-soft p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">{t.dashboard.quickActions}</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-900">My Profile</h2>
+                <button onClick={openEditModal}
+                  className="text-xs text-emerald-600 hover:text-emerald-800 font-semibold flex items-center gap-1">
+                  <FaUserEdit size={12} /> Edit
+                </button>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Name</span>
+                  <span className="font-semibold text-gray-800">{user.first_name} {user.last_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Username</span>
+                  <span className="font-semibold text-gray-800">@{user.username}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Email</span>
+                  <span className="font-semibold text-gray-800 text-xs">{user.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Phone</span>
+                  <span className="font-semibold text-gray-800">{user.phone_number || <span className="text-gray-400 italic">Not set</span>}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="bg-white rounded-xl shadow-soft p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">{t.dashboard.quickActions}</h2>
               <div className="space-y-3">
                 {[
                   { icon: <FaPlus />, title: t.dashboard.newDropoff, desc: t.dashboard.newDropoffDesc, path: '/register' },
@@ -362,9 +406,8 @@ function DashboardPage() {
                   </button>
                 ))}
 
-                {/* Pending drops notice */}
                 {pendingDrops.length > 0 && (
-                  <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800">
+                  <div className="mt-2 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800">
                     <p className="font-semibold">⏳ {pendingDrops.length} submission{pendingDrops.length > 1 ? 's' : ''} pending verification</p>
                     <p className="mt-1 text-yellow-700">Rewards will appear once admin marks them as Done.</p>
                   </div>
@@ -374,6 +417,91 @@ function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* ── EDIT PROFILE MODAL ── */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
+            <button onClick={() => setShowEditModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+              <FaTimes size={18} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                <FaUserEdit className="text-emerald-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Edit Profile</h2>
+                <p className="text-xs text-gray-500">Update your personal information</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">First Name *</label>
+                  <input
+                    type="text"
+                    value={editForm.first_name}
+                    onChange={e => setEditForm(prev => ({ ...prev, first_name: e.target.value }))}
+                    className="w-full p-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                    placeholder="First name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Last Name *</label>
+                  <input
+                    type="text"
+                    value={editForm.last_name}
+                    onChange={e => setEditForm(prev => ({ ...prev, last_name: e.target.value }))}
+                    className="w-full p-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                    placeholder="Last name"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Email *</label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={e => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full p-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                  placeholder="Email address"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Phone Number <span className="text-gray-400 font-normal">(optional)</span></label>
+                <input
+                  type="tel"
+                  value={editForm.phone_number}
+                  onChange={e => setEditForm(prev => ({ ...prev, phone_number: e.target.value }))}
+                  className="w-full p-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                  placeholder="09xxxxxxxxx"
+                />
+                <p className="text-xs text-gray-400 mt-1">Used for SMS notifications when your drop-off status changes.</p>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-500">
+                ℹ️ Username cannot be changed. To update your password, please contact the barangay admin.
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setShowEditModal(false)}
+                className="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 rounded-lg font-semibold text-sm hover:bg-gray-50 transition-all">
+                Cancel
+              </button>
+              <button onClick={handleEditSubmit} disabled={editLoading}
+                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-sm transition-all disabled:opacity-50">
+                {editLoading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

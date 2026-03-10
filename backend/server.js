@@ -660,6 +660,38 @@ app.delete('/api/admin/announcements/:id', async (req, res) => {
 
   app.get('/api/health', (req, res) => res.json({ status: 'Server is running' }));
 
+// UPDATE USER PROFILE
+app.put('/api/user/:id', async (req, res) => {
+  const { id } = req.params;
+  const { first_name, last_name, email, phone_number } = req.body;
+
+  if (!first_name || !last_name || !email) {
+    return res.status(400).json({ error: 'First name, last name, and email are required.' });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE users 
+       SET first_name = $1, last_name = $2, email = $3, phone_number = $4
+       WHERE id = $5
+       RETURNING id, username, email, first_name, last_name, phone_number`,
+      [first_name.trim(), last_name.trim(), email.trim().toLowerCase(), phone_number || null, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    res.json({ success: true, user: result.rows[0] });
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(400).json({ error: 'Email already in use by another account.' });
+    }
+    console.error('Update user error:', err);
+    res.status(500).json({ error: 'Failed to update profile.' });
+  }
+});
+
   const PORT = process.env.PORT || 5000;
   initializeDatabase().then(() => {
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
